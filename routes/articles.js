@@ -111,7 +111,6 @@ router.post('/', protect, async (req, res, next) => {
     const missingFields = [];
     if (!title || title.trim() === '') missingFields.push('title');
     if (!date || date.trim() === '') missingFields.push('date');
-    if (!imageUrl || imageUrl.trim() === '') missingFields.push('imageUrl');
     if (!pdfUrl || pdfUrl.trim() === '') missingFields.push('pdfUrl');
 
     if (missingFields.length > 0) {
@@ -132,14 +131,14 @@ router.post('/', protect, async (req, res, next) => {
     console.log('   Article data:', {
       title: title.substring(0, 50),
       date,
-      imageUrl: imageUrl.substring(0, 80),
+      imageUrl: imageUrl ? imageUrl.substring(0, 80) : '(empty)',
       pdfUrl: pdfUrl.substring(0, 80),
     });
 
     const article = await Article.create({
       title: title.trim(),
       date: date.trim(),
-      imageUrl: imageUrl.trim(),
+      imageUrl: imageUrl ? imageUrl.trim() : '',
       pdfUrl: pdfUrl.trim(),
     });
 
@@ -198,7 +197,7 @@ router.put('/:id', protect, async (req, res) => {
 
     article.title = title || article.title;
     article.date = date || article.date;
-    article.imageUrl = imageUrl || article.imageUrl;
+    article.imageUrl = imageUrl !== undefined ? imageUrl : article.imageUrl;
     article.pdfUrl = pdfUrl || article.pdfUrl;
     article.updatedAt = Date.now();
 

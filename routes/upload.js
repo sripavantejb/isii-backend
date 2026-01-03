@@ -181,8 +181,9 @@ router.post('/multiple', protect, (req, res, next) => {
       console.log('   MIME Type:', files.pdf[0].mimetype);
     }
 
-    if (!result.imageUrl && !result.pdfUrl) {
-      return res.status(400).json({ message: 'No files uploaded' });
+    // Allow upload with just PDF (image is optional)
+    if (!result.pdfUrl) {
+      return res.status(400).json({ message: 'Please upload a PDF file' });
     }
 
     console.log('📦 Upload Summary:');

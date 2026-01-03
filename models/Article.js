@@ -12,7 +12,7 @@ const articleSchema = new mongoose.Schema({
   },
   imageUrl: {
     type: String,
-    required: [true, 'Please provide an image URL'],
+    default: '',
   },
   pdfUrl: {
     type: String,
