@@ -14,6 +14,7 @@ const app = express();
 // Middleware
 const allowedOrigins = [
   process.env.FRONTEND_URL,
+  'https://isii-v1.vercel.app',
   'http://localhost:5173',
   'http://localhost:8080',
   'http://localhost:3000',
