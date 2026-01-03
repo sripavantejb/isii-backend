@@ -10,7 +10,40 @@ const router = express.Router();
 // @access  Public
 router.get('/', async (req, res) => {
   try {
-    const articles = await Article.find().sort({ createdAt: -1 });
+    const articles = await Article.find();
+    
+    // Sort by date field (parsing "Month YYYY" format)
+    articles.sort((a, b) => {
+      const parseDate = (dateStr) => {
+        try {
+          // Parse "Month YYYY" format (e.g., "December 2025")
+          const months = {
+            'january': 0, 'february': 1, 'march': 2, 'april': 3,
+            'may': 4, 'june': 5, 'july': 6, 'august': 7,
+            'september': 8, 'october': 9, 'november': 10, 'december': 11
+          };
+          
+          const parts = dateStr.trim().toLowerCase().split(' ');
+          if (parts.length !== 2) return new Date(0); // Invalid format
+          
+          const month = months[parts[0]];
+          const year = parseInt(parts[1], 10);
+          
+          if (isNaN(month) || isNaN(year)) return new Date(0);
+          
+          return new Date(year, month, 1);
+        } catch (error) {
+          return new Date(0); // Return epoch for invalid dates
+        }
+      };
+      
+      const dateA = parseDate(a.date);
+      const dateB = parseDate(b.date);
+      
+      // Sort descending (newest first)
+      return dateB - dateA;
+    });
+    
     res.json(articles);
   } catch (error) {
     console.error(error);
