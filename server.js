@@ -9,7 +9,7 @@ dotenv.config();
 
 const app = express();
 
-// Middleware
+// CORS configuration
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   'https://isii-v1.vercel.app',
@@ -18,24 +18,37 @@ const allowedOrigins = [
   'http://localhost:3000',
 ].filter(Boolean);
 
-// CORS configuration
+// Helper function to check if origin is allowed
+const isOriginAllowed = (origin) => {
+  if (!origin) return true;
+  if (process.env.NODE_ENV === 'development' && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
+    return true;
+  }
+  return allowedOrigins.indexOf(origin) !== -1;
+};
+
+// Explicit OPTIONS handler for all routes (MUST be before CORS middleware for serverless)
+app.options('*', (req, res) => {
+  const origin = req.headers.origin;
+  
+  if (isOriginAllowed(origin)) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Max-Age', '86400');
+    res.status(204).send();
+  } else {
+    res.status(403).send();
+  }
+});
+
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    // In development, allow all localhost origins
-    if (process.env.NODE_ENV === 'development') {
-      if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-        return callback(null, true);
-      }
-    }
-    
-    // Check if origin is in allowed list
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    if (isOriginAllowed(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(null, false);
     }
   },
   credentials: true,
@@ -47,10 +60,8 @@ const corsOptions = {
   optionsSuccessStatus: 204
 };
 
+// Apply CORS middleware
 app.use(cors(corsOptions));
-
-// Handle preflight requests explicitly (backup for serverless environments)
-app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
