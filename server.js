@@ -10,30 +10,35 @@ dotenv.config();
 const app = express();
 
 // CORS configuration - MUST be the very first middleware
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'https://isii-v1.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:8080',
+  'http://localhost:3000',
+].filter(Boolean);
+
 app.use(cors({
   origin: function (origin, callback) {
-    const allowedOrigins = [
-      process.env.FRONTEND_URL,
-      'https://isii-v1.vercel.app',
-      'http://localhost:5173',
-      'http://localhost:8080',
-      'http://localhost:3000',
-    ].filter(Boolean);
-    
     // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      return callback(null, true);
+    }
     
     // Normalize origin (remove trailing slash)
     const normalizedOrigin = origin.replace(/\/$/, '');
     
     // Check if origin is allowed
-    if (allowedOrigins.some(allowed => {
+    const isAllowed = allowedOrigins.some(allowed => {
       const normalizedAllowed = allowed.replace(/\/$/, '');
       return normalizedOrigin === normalizedAllowed || normalizedOrigin === allowed;
-    })) {
+    });
+    
+    if (isAllowed) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      // Deny origin - cors package will not set CORS headers for denied origins
+      callback(null, false);
     }
   },
   credentials: true,
