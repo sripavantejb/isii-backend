@@ -18,8 +18,16 @@ const allowedOrigins = [
   'http://localhost:3000',
 ].filter(Boolean);
 
+// Log allowed origins for debugging
+console.log('🔒 CORS Allowed Origins:', allowedOrigins);
+
 app.use(cors({
   origin: function (origin, callback) {
+    // Log incoming origin for debugging
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🌐 CORS Request Origin:', origin);
+    }
+    
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) {
       return callback(null, true);
@@ -35,16 +43,23 @@ app.use(cors({
     });
     
     if (isAllowed) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('✅ CORS: Origin allowed');
+      }
       callback(null, true);
     } else {
       // Deny origin - cors package will not set CORS headers for denied origins
+      console.warn('❌ CORS: Origin not allowed:', origin);
       callback(null, false);
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  maxAge: 86400
+  exposedHeaders: [],
+  maxAge: 86400,
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
 
 app.use(express.json());
