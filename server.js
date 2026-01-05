@@ -95,10 +95,19 @@ const ensureDBConnection = async (req, res, next) => {
     next();
   } catch (error) {
     console.error('Database connection error in middleware:', error.message);
+    
+    // Provide more helpful error messages
+    let errorMessage = 'Database connection error';
+    if (error.message.includes('MONGODB_URI environment variable')) {
+      errorMessage = 'MongoDB connection string is not configured. Please set MONGODB_URI in Vercel environment variables.';
+    } else if (error.message.includes('uri parameter') || error.message.includes('openUri')) {
+      errorMessage = 'MongoDB connection string is missing or invalid. Please check your MONGODB_URI environment variable.';
+    }
+    
     res.status(500).json({
-      message: 'Database connection error',
+      message: errorMessage,
       error: process.env.NODE_ENV === 'production' 
-        ? 'Internal server error' 
+        ? 'Please check server configuration' 
         : error.message
     });
   }
