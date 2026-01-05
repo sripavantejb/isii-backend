@@ -1,13 +1,11 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const mongoose = require('mongoose');
 const connectDB = require('./config/db');
 
 // Load env vars
 dotenv.config();
-
-// Connect to database
-connectDB();
 
 const app = express();
 
@@ -49,15 +47,42 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/articles', require('./routes/articles'));
-app.use('/api/upload', require('./routes/upload'));
-
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ message: 'Server is running' });
+// Root health check (no DB required)
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'Server is running' });
 });
+
+// API health check (no DB required)
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', message: 'Server is running' });
+});
+
+// Middleware to ensure DB connection for API routes
+const ensureDBConnection = async (req, res, next) => {
+  try {
+    // Check if already connected
+    if (mongoose.connection.readyState === 1) {
+      return next();
+    }
+    
+    // Attempt to connect
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error('Database connection error in middleware:', error.message);
+    res.status(500).json({
+      message: 'Database connection error',
+      error: process.env.NODE_ENV === 'production' 
+        ? 'Internal server error' 
+        : error.message
+    });
+  }
+};
+
+// Routes (with DB connection middleware)
+app.use('/api/auth', ensureDBConnection, require('./routes/auth'));
+app.use('/api/articles', ensureDBConnection, require('./routes/articles'));
+app.use('/api/upload', ensureDBConnection, require('./routes/upload'));
 
 // Global error handler
 app.use((err, req, res, next) => {
@@ -74,12 +99,4 @@ app.use((err, req, res, next) => {
 
 // Export app for Vercel serverless functions
 module.exports = app;
-
-// Start server only if not in Vercel environment
-if (require.main === module) {
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
-}
 

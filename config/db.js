@@ -1,8 +1,24 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
 
+// Cache the connection promise to avoid multiple simultaneous connection attempts
+let cachedConnection = null;
+
 const connectDB = async () => {
   try {
+    // Check if already connected (readyState: 0=disconnected, 1=connected, 2=connecting, 3=disconnecting)
+    if (mongoose.connection.readyState === 1) {
+      console.log('MongoDB: Using existing connection');
+      return mongoose.connection;
+    }
+
+    // If there's already a connection attempt in progress, wait for it
+    if (cachedConnection) {
+      console.log('MongoDB: Waiting for existing connection attempt');
+      return await cachedConnection;
+    }
+
+    // Create new connection
     const options = {
       serverSelectionTimeoutMS: 10000, // 10 seconds timeout
       socketTimeoutMS: 45000, // 45 seconds socket timeout
@@ -11,8 +27,18 @@ const connectDB = async () => {
       w: 'majority'
     };
 
-    const conn = await mongoose.connect(process.env.MONGODB_URI, options);
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    // Cache the connection promise
+    cachedConnection = mongoose.connect(process.env.MONGODB_URI, options).then((conn) => {
+      console.log(`MongoDB Connected: ${conn.connection.host}`);
+      cachedConnection = null; // Clear cache on success
+      return conn;
+    }).catch((error) => {
+      cachedConnection = null; // Clear cache on error to allow retry
+      throw error;
+    });
+
+    const conn = await cachedConnection;
+    return conn;
   } catch (error) {
     console.error(`\n❌ MongoDB Connection Error: ${error.message}\n`);
     
@@ -34,11 +60,7 @@ const connectDB = async () => {
     
     console.error('📚 For more help, see: https://www.mongodb.com/docs/atlas/security-whitelist/\n');
     
-    // Don't exit process in serverless environments (Vercel)
-    if (require.main === module) {
-      process.exit(1);
-    }
-    // In serverless, throw error instead of exiting
+    // Never exit process in serverless environments - throw error instead
     throw error;
   }
 };
