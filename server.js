@@ -39,11 +39,18 @@ const corsOptions = {
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Length', 'Content-Type'],
+  maxAge: 86400, // 24 hours
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 };
 
 app.use(cors(corsOptions));
+
+// Handle preflight requests explicitly (backup for serverless environments)
+app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -59,6 +66,11 @@ app.get('/api/health', (req, res) => {
 
 // Middleware to ensure DB connection for API routes
 const ensureDBConnection = async (req, res, next) => {
+  // Skip DB connection for OPTIONS requests (preflight)
+  if (req.method === 'OPTIONS') {
+    return next();
+  }
+  
   try {
     // Check if already connected
     if (mongoose.connection.readyState === 1) {
