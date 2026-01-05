@@ -20,48 +20,61 @@ const allowedOrigins = [
 
 // Helper function to check if origin is allowed
 const isOriginAllowed = (origin) => {
-  if (!origin) return true;
-  if (process.env.NODE_ENV === 'development' && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
+  if (!origin) return false;
+  
+  // Normalize origin (remove trailing slash)
+  const normalizedOrigin = origin.replace(/\/$/, '');
+  
+  if (process.env.NODE_ENV === 'development' && (normalizedOrigin.includes('localhost') || normalizedOrigin.includes('127.0.0.1'))) {
     return true;
   }
-  return allowedOrigins.indexOf(origin) !== -1;
-};
-
-// Explicit OPTIONS handler for all routes (MUST be before CORS middleware for serverless)
-app.options('*', (req, res) => {
-  const origin = req.headers.origin;
   
-  if (isOriginAllowed(origin)) {
-    res.header('Access-Control-Allow-Origin', origin || '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Max-Age', '86400');
-    res.status(204).send();
-  } else {
-    res.status(403).send();
-  }
-});
-
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (isOriginAllowed(origin)) {
-      callback(null, true);
-    } else {
-      callback(null, false);
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Content-Length', 'Content-Type'],
-  maxAge: 86400, // 24 hours
-  preflightContinue: false,
-  optionsSuccessStatus: 204
+  // Check exact match or normalized match
+  return allowedOrigins.some(allowed => {
+    const normalizedAllowed = allowed.replace(/\/$/, '');
+    return normalizedOrigin === normalizedAllowed || normalizedOrigin === allowed;
+  });
 };
 
-// Apply CORS middleware
-app.use(cors(corsOptions));
+// CORS middleware - MUST be the very first middleware
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const isAllowed = isOriginAllowed(origin);
+  
+  // Debug logging (remove in production if needed)
+  if (req.method === 'OPTIONS') {
+    console.log('OPTIONS request:', { origin, isAllowed, allowedOrigins });
+  }
+  
+  // Always set CORS headers for OPTIONS requests (preflight)
+  if (req.method === 'OPTIONS') {
+    if (isAllowed && origin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Max-Age', '86400');
+      return res.status(204).end();
+    } else {
+      // For denied origins, still send CORS headers (browser will block, but headers must be present)
+      // Note: Can't use '*' with credentials: true, so use the origin if provided
+      if (origin) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+      }
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+      return res.status(403).end();
+    }
+  }
+  
+  // Handle regular requests - only set headers if origin is allowed
+  if (isAllowed && origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+  
+  next();
+});
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
