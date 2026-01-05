@@ -9,72 +9,39 @@ dotenv.config();
 
 const app = express();
 
-// CORS configuration
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  'https://isii-v1.vercel.app',
-  'http://localhost:5173',
-  'http://localhost:8080',
-  'http://localhost:3000',
-].filter(Boolean);
-
-// Helper function to check if origin is allowed
-const isOriginAllowed = (origin) => {
-  if (!origin) return false;
-  
-  // Normalize origin (remove trailing slash)
-  const normalizedOrigin = origin.replace(/\/$/, '');
-  
-  if (process.env.NODE_ENV === 'development' && (normalizedOrigin.includes('localhost') || normalizedOrigin.includes('127.0.0.1'))) {
-    return true;
-  }
-  
-  // Check exact match or normalized match
-  return allowedOrigins.some(allowed => {
-    const normalizedAllowed = allowed.replace(/\/$/, '');
-    return normalizedOrigin === normalizedAllowed || normalizedOrigin === allowed;
-  });
-};
-
-// CORS middleware - MUST be the very first middleware
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  const isAllowed = isOriginAllowed(origin);
-  
-  // Debug logging (remove in production if needed)
-  if (req.method === 'OPTIONS') {
-    console.log('OPTIONS request:', { origin, isAllowed, allowedOrigins });
-  }
-  
-  // Always set CORS headers for OPTIONS requests (preflight)
-  if (req.method === 'OPTIONS') {
-    if (isAllowed && origin) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Access-Control-Max-Age', '86400');
-      return res.status(204).end();
+// CORS configuration - MUST be the very first middleware
+app.use(cors({
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      process.env.FRONTEND_URL,
+      'https://isii-v1.vercel.app',
+      'http://localhost:5173',
+      'http://localhost:8080',
+      'http://localhost:3000',
+    ].filter(Boolean);
+    
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Normalize origin (remove trailing slash)
+    const normalizedOrigin = origin.replace(/\/$/, '');
+    
+    // Check if origin is allowed
+    if (allowedOrigins.some(allowed => {
+      const normalizedAllowed = allowed.replace(/\/$/, '');
+      return normalizedOrigin === normalizedAllowed || normalizedOrigin === allowed;
+    })) {
+      callback(null, true);
     } else {
-      // For denied origins, still send CORS headers (browser will block, but headers must be present)
-      // Note: Can't use '*' with credentials: true, so use the origin if provided
-      if (origin) {
-        res.setHeader('Access-Control-Allow-Origin', origin);
-      }
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-      return res.status(403).end();
+      callback(new Error('Not allowed by CORS'));
     }
-  }
-  
-  // Handle regular requests - only set headers if origin is allowed
-  if (isAllowed && origin) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-  }
-  
-  next();
-});
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  maxAge: 86400
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
