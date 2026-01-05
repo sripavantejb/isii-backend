@@ -33,7 +33,13 @@ const connectDB = async () => {
     }
     
     console.error('📚 For more help, see: https://www.mongodb.com/docs/atlas/security-whitelist/\n');
-    process.exit(1);
+    
+    // Don't exit process in serverless environments (Vercel)
+    if (require.main === module) {
+      process.exit(1);
+    }
+    // In serverless, throw error instead of exiting
+    throw error;
   }
 };
 
