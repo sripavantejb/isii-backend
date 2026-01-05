@@ -6,6 +6,9 @@ const router = express.Router();
 
 // Generate JWT Token
 const generateToken = (id) => {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is not set in environment variables');
+  }
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: '7d',
   });
@@ -37,6 +40,15 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
+    // Check JWT_SECRET before generating token
+    if (!process.env.JWT_SECRET) {
+      console.error('❌ JWT_SECRET is not set in environment variables');
+      return res.status(500).json({ 
+        message: 'Server configuration error',
+        error: 'JWT_SECRET environment variable is not set. Please configure it in Vercel environment variables.'
+      });
+    }
+
     res.json({
       token: generateToken(user._id),
       user: {
@@ -46,8 +58,20 @@ router.post('/login', async (req, res) => {
       },
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ Login error:', error);
+    
+    // Handle JWT_SECRET error specifically
+    if (error.message && error.message.includes('JWT_SECRET')) {
+      return res.status(500).json({ 
+        message: 'Server configuration error',
+        error: 'JWT_SECRET environment variable is not set. Please configure it in Vercel environment variables.'
+      });
+    }
+    
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message
+    });
   }
 });
 
