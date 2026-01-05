@@ -16,22 +16,26 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:8080',
   'http://localhost:3000',
+  '*'
+  // Add any other frontend URLs here
 ].filter(Boolean)
   // Remove duplicates
   .filter((value, index, self) => self.indexOf(value) === index);
 
-// Log allowed origins for debugging
-console.log('🔒 CORS Allowed Origins:', allowedOrigins);
+// Log on startup
+console.log('🔒 CORS Configuration initialized');
+console.log('   Allowed Origins:', allowedOrigins);
+console.log('   FRONTEND_URL env:', process.env.FRONTEND_URL);
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Log incoming origin for debugging
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('🌐 CORS Request Origin:', origin);
-    }
+    // Log incoming origin for debugging (enable in production for troubleshooting)
+    console.log('🌐 CORS Request Origin:', origin || '(no origin)');
+    console.log('🔒 Allowed Origins:', allowedOrigins);
     
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) {
+      console.log('✅ CORS: Allowing request with no origin');
       return callback(null, true);
     }
     
@@ -41,17 +45,20 @@ app.use(cors({
     // Check if origin is allowed
     const isAllowed = allowedOrigins.some(allowed => {
       const normalizedAllowed = allowed.replace(/\/$/, '');
-      return normalizedOrigin === normalizedAllowed || normalizedOrigin === allowed;
+      const matches = normalizedOrigin === normalizedAllowed || normalizedOrigin === allowed;
+      if (matches) {
+        console.log(`✅ CORS: Origin matches allowed origin: ${allowed}`);
+      }
+      return matches;
     });
     
     if (isAllowed) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('✅ CORS: Origin allowed');
-      }
+      console.log('✅ CORS: Origin allowed');
       callback(null, true);
     } else {
       // Deny origin - cors package will not set CORS headers for denied origins
       console.warn('❌ CORS: Origin not allowed:', origin);
+      console.warn('   Allowed origins:', allowedOrigins);
       callback(null, false);
     }
   },
