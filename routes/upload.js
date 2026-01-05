@@ -1,11 +1,22 @@
 const express = require('express');
 const multer = require('multer');
 const multerS3 = require('multer-s3');
+const crypto = require('crypto');
 const { protect } = require('../middleware/auth');
-const { v4: uuidv4 } = require('uuid');
 // dotenv is already loaded in config/aws.js and server.js, no need to load again
 
 const router = express.Router();
+
+// Use Node.js built-in crypto.randomUUID() instead of uuid package (ES module issue)
+const generateUUID = () => {
+  try {
+    // Use crypto.randomUUID() if available (Node.js 14.17.0+)
+    return crypto.randomUUID();
+  } catch (error) {
+    // Fallback for older Node.js versions
+    return crypto.randomBytes(16).toString('hex');
+  }
+};
 
 // Initialize S3 client and multer configuration
 let s3Client;
@@ -30,7 +41,7 @@ function initializeUpload() {
         key: function (req, file, cb) {
           const folder = file.mimetype.startsWith('image/') ? 'images/' : 'pdfs/';
           const extension = file.originalname.split('.').pop();
-          const filename = `${folder}${Date.now()}-${uuidv4()}.${extension}`;
+          const filename = `${folder}${Date.now()}-${generateUUID()}.${extension}`;
           cb(null, filename);
         },
         contentType: multerS3.AUTO_CONTENT_TYPE,

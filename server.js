@@ -16,7 +16,9 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:8080',
   'http://localhost:3000',
-].filter(Boolean);
+].filter(Boolean)
+  // Remove duplicates
+  .filter((value, index, self) => self.indexOf(value) === index);
 
 // Log allowed origins for debugging
 console.log('🔒 CORS Allowed Origins:', allowedOrigins);
