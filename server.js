@@ -10,53 +10,36 @@ dotenv.config();
 const app = express();
 
 // CORS configuration - MUST be the very first middleware
-// Simplified and more permissive for development
+// Manual CORS middleware that runs before everything else
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  
+  // Always set CORS headers - be very permissive
+  if (origin) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else {
+    // If no origin, allow all (for testing)
+    res.header('Access-Control-Allow-Origin', '*');
+  }
+  
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers');
+  res.header('Access-Control-Max-Age', '86400');
+  
+  // Handle preflight requests immediately
+  if (req.method === 'OPTIONS') {
+    console.log('✅ CORS: Handling OPTIONS preflight request from:', origin);
+    return res.status(204).end();
+  }
+  
+  console.log('🌐 CORS: Request from origin:', origin || '(no origin)');
+  next();
+});
+
+// Also use cors package as backup
 app.use(cors({
-  origin: function (origin, callback) {
-    // Log incoming origin for debugging
-    console.log('🌐 CORS Request Origin:', origin || '(no origin)');
-    
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) {
-      console.log('✅ CORS: Allowing request with no origin');
-      return callback(null, true);
-    }
-    
-    // Normalize origin (remove trailing slash)
-    const normalizedOrigin = origin.replace(/\/$/, '');
-    
-    // Always allow localhost origins (safe for development and testing)
-    if (normalizedOrigin.includes('localhost') || normalizedOrigin.includes('127.0.0.1')) {
-      console.log('✅ CORS: Allowing localhost origin');
-      return callback(null, true);
-    }
-    
-    // Allow specific production origins
-    const allowedOrigins = [
-      process.env.FRONTEND_URL,
-      'https://isii-v1.vercel.app',
-      'https://isii-v1.vercel.app/',
-    ].filter(Boolean);
-    
-    const isAllowed = allowedOrigins.some(allowed => {
-      const normalizedAllowed = allowed.replace(/\/$/, '');
-      return normalizedOrigin === normalizedAllowed;
-    });
-    
-    if (isAllowed) {
-      console.log('✅ CORS: Origin allowed');
-      callback(null, true);
-    } else {
-      // In development, be more permissive
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('✅ CORS: Allowing origin in development mode');
-        return callback(null, true);
-      }
-      
-      console.warn('❌ CORS: Origin not allowed:', origin);
-      callback(null, false);
-    }
-  },
+  origin: true, // Allow all origins
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: [
@@ -73,33 +56,6 @@ app.use(cors({
   preflightContinue: false,
   optionsSuccessStatus: 204
 }));
-
-// Explicit OPTIONS handler for all routes (handles preflight requests)
-app.options('*', (req, res) => {
-  const origin = req.headers.origin;
-  
-  // Set CORS headers for preflight
-  if (origin) {
-    if (origin.includes('localhost') || origin.includes('127.0.0.1') || process.env.NODE_ENV !== 'production') {
-      res.header('Access-Control-Allow-Origin', origin);
-    } else {
-      const allowedOrigins = [
-        process.env.FRONTEND_URL,
-        'https://isii-v1.vercel.app',
-      ].filter(Boolean);
-      
-      if (allowedOrigins.some(allowed => origin === allowed.replace(/\/$/, ''))) {
-        res.header('Access-Control-Allow-Origin', origin);
-      }
-    }
-  }
-  
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-  res.header('Access-Control-Max-Age', '86400');
-  res.status(204).end();
-});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -155,8 +111,20 @@ app.use('/api/auth', ensureDBConnection, require('./routes/auth'));
 app.use('/api/articles', ensureDBConnection, require('./routes/articles'));
 app.use('/api/upload', ensureDBConnection, require('./routes/upload'));
 
-// Global error handler
+// Global error handler - ensure CORS headers are always set
 app.use((err, req, res, next) => {
+  const origin = req.headers.origin;
+  
+  // Always set CORS headers even on errors
+  if (origin) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else {
+    res.header('Access-Control-Allow-Origin', '*');
+  }
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  
   console.error('❌ Global error handler:', err);
   console.error('   Error name:', err.name);
   console.error('   Error message:', err.message);
