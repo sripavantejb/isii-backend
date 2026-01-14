@@ -57,8 +57,9 @@ app.use(cors({
   optionsSuccessStatus: 204
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Increase body size limits to support file uploads (50MB)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Root health check (no DB required)
 app.get('/', (req, res) => {
@@ -124,6 +125,17 @@ app.use((err, req, res, next) => {
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  
+  // Handle 413 Payload Too Large errors specifically
+  if (err.status === 413 || err.statusCode === 413 || err.message?.includes('413') || err.message?.includes('too large') || err.message?.includes('payload')) {
+    console.error('❌ 413 Payload Too Large Error:', err.message);
+    return res.status(413).json({
+      message: 'File upload too large. Maximum file size is 10MB per file. Note: Vercel free tier has a 4.5MB request body limit. Consider upgrading to Vercel Pro for larger uploads or compress your files.',
+      error: 'Payload too large',
+      maxFileSize: '10MB',
+      platformLimit: '4.5MB (Vercel free tier)'
+    });
+  }
   
   console.error('❌ Global error handler:', err);
   console.error('   Error name:', err.name);

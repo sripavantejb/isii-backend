@@ -157,10 +157,35 @@ router.post('/multiple', protect, (req, res, next) => {
       // Handle multer errors
       if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
-          return res.status(400).json({ message: 'File too large. Maximum size is 10MB.' });
+          return res.status(400).json({ 
+            message: 'File too large. Maximum size is 10MB per file.',
+            error: 'File size limit exceeded',
+            maxFileSize: '10MB',
+            tip: 'Please compress your file or split it into smaller parts.'
+          });
+        }
+        if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+          return res.status(400).json({ 
+            message: 'Unexpected file field. Only "image" and "pdf" fields are allowed.',
+            error: err.message 
+          });
         }
         console.error('Multer error:', err);
-        return res.status(400).json({ message: 'Upload error', error: err.message });
+        return res.status(400).json({ 
+          message: 'Upload error', 
+          error: err.message,
+          code: err.code 
+        });
+      }
+      // Handle 413 errors (Payload Too Large)
+      if (err.status === 413 || err.statusCode === 413 || err.message?.includes('413') || err.message?.includes('too large') || err.message?.includes('payload')) {
+        return res.status(413).json({
+          message: 'Request payload too large. Maximum file size is 10MB per file. Note: Vercel free tier has a 4.5MB request body limit.',
+          error: 'Payload too large',
+          maxFileSize: '10MB',
+          platformLimit: '4.5MB (Vercel free tier)',
+          tip: 'Consider upgrading to Vercel Pro for larger uploads or compress your files before uploading.'
+        });
       }
       // Handle other errors
       console.error('Upload middleware error:', err);
