@@ -10,28 +10,11 @@ dotenv.config();
 const app = express();
 
 // CORS configuration - MUST be the very first middleware
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  'https://isii-v1.vercel.app',
-  'http://localhost:5173',
-  'http://localhost:8080',
-  'http://localhost:3000',
-  '*'
-  // Add any other frontend URLs here
-].filter(Boolean)
-  // Remove duplicates
-  .filter((value, index, self) => self.indexOf(value) === index);
-
-// Log on startup
-console.log('🔒 CORS Configuration initialized');
-console.log('   Allowed Origins:', allowedOrigins);
-console.log('   FRONTEND_URL env:', process.env.FRONTEND_URL);
-
+// Simplified and more permissive for development
 app.use(cors({
   origin: function (origin, callback) {
-    // Log incoming origin for debugging (enable in production for troubleshooting)
+    // Log incoming origin for debugging
     console.log('🌐 CORS Request Origin:', origin || '(no origin)');
-    console.log('🔒 Allowed Origins:', allowedOrigins);
     
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) {
@@ -42,34 +25,81 @@ app.use(cors({
     // Normalize origin (remove trailing slash)
     const normalizedOrigin = origin.replace(/\/$/, '');
     
-    // Check if origin is allowed
+    // Always allow localhost origins (safe for development and testing)
+    if (normalizedOrigin.includes('localhost') || normalizedOrigin.includes('127.0.0.1')) {
+      console.log('✅ CORS: Allowing localhost origin');
+      return callback(null, true);
+    }
+    
+    // Allow specific production origins
+    const allowedOrigins = [
+      process.env.FRONTEND_URL,
+      'https://isii-v1.vercel.app',
+      'https://isii-v1.vercel.app/',
+    ].filter(Boolean);
+    
     const isAllowed = allowedOrigins.some(allowed => {
       const normalizedAllowed = allowed.replace(/\/$/, '');
-      const matches = normalizedOrigin === normalizedAllowed || normalizedOrigin === allowed;
-      if (matches) {
-        console.log(`✅ CORS: Origin matches allowed origin: ${allowed}`);
-      }
-      return matches;
+      return normalizedOrigin === normalizedAllowed;
     });
     
     if (isAllowed) {
       console.log('✅ CORS: Origin allowed');
       callback(null, true);
     } else {
-      // Deny origin - cors package will not set CORS headers for denied origins
+      // In development, be more permissive
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('✅ CORS: Allowing origin in development mode');
+        return callback(null, true);
+      }
+      
       console.warn('❌ CORS: Origin not allowed:', origin);
-      console.warn('   Allowed origins:', allowedOrigins);
       callback(null, false);
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'Access-Control-Request-Method',
+    'Access-Control-Request-Headers'
+  ],
   exposedHeaders: [],
   maxAge: 86400,
   preflightContinue: false,
   optionsSuccessStatus: 204
 }));
+
+// Explicit OPTIONS handler for all routes (handles preflight requests)
+app.options('*', (req, res) => {
+  const origin = req.headers.origin;
+  
+  // Set CORS headers for preflight
+  if (origin) {
+    if (origin.includes('localhost') || origin.includes('127.0.0.1') || process.env.NODE_ENV !== 'production') {
+      res.header('Access-Control-Allow-Origin', origin);
+    } else {
+      const allowedOrigins = [
+        process.env.FRONTEND_URL,
+        'https://isii-v1.vercel.app',
+      ].filter(Boolean);
+      
+      if (allowedOrigins.some(allowed => origin === allowed.replace(/\/$/, ''))) {
+        res.header('Access-Control-Allow-Origin', origin);
+      }
+    }
+  }
+  
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.header('Access-Control-Max-Age', '86400');
+  res.status(204).end();
+});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
