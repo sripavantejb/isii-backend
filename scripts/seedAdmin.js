@@ -11,26 +11,50 @@ const seedAdmin = async () => {
     await mongoose.connect(mongoUri);
     console.log('MongoDB Connected');
 
-    // Check if admin already exists
-    const existingAdmin = await User.findOne({ email: 'admin@isii.com' });
+    // Admin users to create
+    const adminUsers = [
+      { email: 'admin@isii.global', password: 'cms@isiiglobal', role: 'admin' },
+      { email: 'isii@test', password: 'cms@isiiglobal', role: 'admin' }
+    ];
 
-    if (existingAdmin) {
-      console.log('Admin user already exists');
-      process.exit(0);
+    let createdCount = 0;
+    let updatedCount = 0;
+
+    for (const adminData of adminUsers) {
+      // Check if admin already exists
+      const existingAdmin = await User.findOne({ email: adminData.email });
+
+      if (existingAdmin) {
+        // Update password for existing admin
+        existingAdmin.password = adminData.password;
+        await existingAdmin.save();
+        console.log(`✅ Updated password for ${adminData.email}`);
+        updatedCount++;
+      } else {
+        // Create admin user
+        const admin = new User({
+          email: adminData.email,
+          password: adminData.password,
+          role: adminData.role,
+        });
+        await admin.save();
+
+        console.log(`✅ Admin user created successfully:`);
+        console.log(`  Email: ${admin.email}`);
+        console.log(`  Password: ${adminData.password}`);
+        createdCount++;
+      }
     }
 
-    // Create admin user
-    const admin = new User({
-      email: 'admin@isii.com',
-      password: 'admin123', // Change this password after first login
-      role: 'admin',
-    });
-    await admin.save();
-
-    console.log('Admin user created successfully:');
-    console.log(`Email: ${admin.email}`);
-    console.log('Password: admin123');
-    console.log('Please change the password after first login!');
+    if (createdCount > 0) {
+      console.log(`\n✅ Created ${createdCount} admin user(s)`);
+    }
+    if (updatedCount > 0) {
+      console.log(`✅ Updated ${updatedCount} admin user(s)`);
+    }
+    if (createdCount === 0 && updatedCount === 0) {
+      console.log('No changes needed');
+    }
 
     process.exit(0);
   } catch (error) {

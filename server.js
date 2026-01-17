@@ -11,10 +11,12 @@ const app = express();
 
 // CORS configuration - MUST be the very first middleware
 // Manual CORS middleware that runs before everything else
+// Primary domain: https://isii.global
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   
   // Always set CORS headers - be very permissive
+  // Allows requests from isii.global and other origins
   if (origin) {
     res.header('Access-Control-Allow-Origin', origin);
   } else {
