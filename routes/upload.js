@@ -47,7 +47,7 @@ function initializeUpload() {
         contentType: multerS3.AUTO_CONTENT_TYPE,
       }),
       limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB limit
+        fileSize: 4.5 * 1024 * 1024, // 4.5MB limit
       },
       fileFilter: (req, file, cb) => {
         // Allow images and PDFs
@@ -96,7 +96,7 @@ router.post('/', protect, (req, res, next) => {
       // Handle multer errors
       if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
-          return res.status(400).json({ message: 'File too large. Maximum size is 10MB.' });
+          return res.status(400).json({ message: 'File too large. Maximum size is 4.5MB.' });
         }
         console.error('Multer error:', err);
         return res.status(400).json({ message: 'Upload error', error: err.message });
@@ -151,6 +151,7 @@ router.post('/multiple', protect, (req, res, next) => {
   }
   upload.fields([
     { name: 'image', maxCount: 1 },
+    { name: 'bannerImage', maxCount: 1 },
     { name: 'pdf', maxCount: 1 }
   ])(req, res, (err) => {
     if (err) {
@@ -158,15 +159,15 @@ router.post('/multiple', protect, (req, res, next) => {
       if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
           return res.status(400).json({ 
-            message: 'File too large. Maximum size is 10MB per file.',
+            message: 'File too large. Maximum size is 4.5MB per file.',
             error: 'File size limit exceeded',
-            maxFileSize: '10MB',
+            maxFileSize: '4.5MB',
             tip: 'Please compress your file or split it into smaller parts.'
           });
         }
         if (err.code === 'LIMIT_UNEXPECTED_FILE') {
           return res.status(400).json({ 
-            message: 'Unexpected file field. Only "image" and "pdf" fields are allowed.',
+            message: 'Unexpected file field. Only "image", "bannerImage", and "pdf" fields are allowed.',
             error: err.message 
           });
         }
@@ -180,11 +181,10 @@ router.post('/multiple', protect, (req, res, next) => {
       // Handle 413 errors (Payload Too Large)
       if (err.status === 413 || err.statusCode === 413 || err.message?.includes('413') || err.message?.includes('too large') || err.message?.includes('payload')) {
         return res.status(413).json({
-          message: 'Request payload too large. Maximum file size is 10MB per file. Note: Vercel free tier has a 4.5MB request body limit.',
+          message: 'Request payload too large. Maximum file size is 4.5MB per file.',
           error: 'Payload too large',
-          maxFileSize: '10MB',
-          platformLimit: '4.5MB (Vercel free tier)',
-          tip: 'Consider upgrading to Vercel Pro for larger uploads or compress your files before uploading.'
+          maxFileSize: '4.5MB',
+          tip: 'Please compress your files before uploading.'
         });
       }
       // Handle other errors
@@ -207,6 +207,14 @@ router.post('/multiple', protect, (req, res, next) => {
       console.log('   Image URL:', files.image[0].location);
       console.log('   Image Key:', files.image[0].key);
       console.log('   MIME Type:', files.image[0].mimetype);
+    }
+
+    if (files.bannerImage && files.bannerImage[0]) {
+      result.bannerImageUrl = files.bannerImage[0].location;
+      console.log('✅ Banner Image uploaded to S3:');
+      console.log('   Banner Image URL:', files.bannerImage[0].location);
+      console.log('   Banner Image Key:', files.bannerImage[0].key);
+      console.log('   MIME Type:', files.bannerImage[0].mimetype);
     }
 
     if (files.pdf && files.pdf[0]) {

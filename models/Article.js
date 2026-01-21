@@ -14,6 +14,10 @@ const articleSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  bannerImageUrl: {
+    type: String,
+    default: '',
+  },
   pdfUrl: {
     type: String,
     required: [true, 'Please provide a PDF URL'],

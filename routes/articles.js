@@ -105,7 +105,7 @@ router.post('/', protect, async (req, res, next) => {
       });
     }
 
-    const { title, date, imageUrl, pdfUrl } = req.body;
+    const { title, date, imageUrl, bannerImageUrl, pdfUrl } = req.body;
 
     // Validate required fields (check for empty strings too)
     const missingFields = [];
@@ -119,6 +119,7 @@ router.post('/', protect, async (req, res, next) => {
         title: title || '(empty)',
         date: date || '(empty)',
         imageUrl: imageUrl ? `${imageUrl.substring(0, 50)}...` : '(empty)',
+        bannerImageUrl: bannerImageUrl ? `${bannerImageUrl.substring(0, 50)}...` : '(empty)',
         pdfUrl: pdfUrl ? `${pdfUrl.substring(0, 50)}...` : '(empty)',
       });
       return res.status(400).json({ 
@@ -132,6 +133,7 @@ router.post('/', protect, async (req, res, next) => {
       title: title.substring(0, 50),
       date,
       imageUrl: imageUrl ? imageUrl.substring(0, 80) : '(empty)',
+      bannerImageUrl: bannerImageUrl ? bannerImageUrl.substring(0, 80) : '(empty)',
       pdfUrl: pdfUrl.substring(0, 80),
     });
 
@@ -139,6 +141,7 @@ router.post('/', protect, async (req, res, next) => {
       title: title.trim(),
       date: date.trim(),
       imageUrl: imageUrl ? imageUrl.trim() : '',
+      bannerImageUrl: bannerImageUrl ? bannerImageUrl.trim() : '',
       pdfUrl: pdfUrl.trim(),
     });
 
@@ -187,7 +190,7 @@ router.post('/', protect, async (req, res, next) => {
 // @access  Private
 router.put('/:id', protect, async (req, res) => {
   try {
-    const { title, date, imageUrl, pdfUrl } = req.body;
+    const { title, date, imageUrl, bannerImageUrl, pdfUrl } = req.body;
 
     const article = await Article.findById(req.params.id);
 
@@ -198,6 +201,7 @@ router.put('/:id', protect, async (req, res) => {
     article.title = title || article.title;
     article.date = date || article.date;
     article.imageUrl = imageUrl !== undefined ? imageUrl : article.imageUrl;
+    article.bannerImageUrl = bannerImageUrl !== undefined ? bannerImageUrl : article.bannerImageUrl;
     article.pdfUrl = pdfUrl || article.pdfUrl;
     article.updatedAt = Date.now();
 
