@@ -47,7 +47,8 @@ function initializeUpload() {
         contentType: multerS3.AUTO_CONTENT_TYPE,
       }),
       limits: {
-        fileSize: 4.5 * 1024 * 1024, // 4.5MB limit
+        // Keep in sync with frontend maxSize (5MB)
+        fileSize: 5 * 1024 * 1024,
       },
       fileFilter: (req, file, cb) => {
         // Allow images and PDFs
@@ -96,7 +97,7 @@ router.post('/', protect, (req, res, next) => {
       // Handle multer errors
       if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
-          return res.status(400).json({ message: 'File too large. Maximum size is 4.5MB.' });
+          return res.status(400).json({ message: 'File too large. Maximum size is 5MB.' });
         }
         console.error('Multer error:', err);
         return res.status(400).json({ message: 'Upload error', error: err.message });
@@ -159,9 +160,9 @@ router.post('/multiple', protect, (req, res, next) => {
       if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
           return res.status(400).json({ 
-            message: 'File too large. Maximum size is 4.5MB per file.',
+            message: 'File too large. Maximum size is 5MB per file.',
             error: 'File size limit exceeded',
-            maxFileSize: '4.5MB',
+            maxFileSize: '5MB',
             tip: 'Please compress your file or split it into smaller parts.'
           });
         }
@@ -181,9 +182,9 @@ router.post('/multiple', protect, (req, res, next) => {
       // Handle 413 errors (Payload Too Large)
       if (err.status === 413 || err.statusCode === 413 || err.message?.includes('413') || err.message?.includes('too large') || err.message?.includes('payload')) {
         return res.status(413).json({
-          message: 'Request payload too large. Maximum file size is 4.5MB per file.',
+          message: 'Request payload too large. Maximum file size is 5MB per file.',
           error: 'Payload too large',
-          maxFileSize: '4.5MB',
+          maxFileSize: '5MB',
           tip: 'Please compress your files before uploading.'
         });
       }
@@ -225,9 +226,11 @@ router.post('/multiple', protect, (req, res, next) => {
       console.log('   MIME Type:', files.pdf[0].mimetype);
     }
 
-    // Allow upload with just PDF (image is optional)
-    if (!result.pdfUrl) {
-      return res.status(400).json({ message: 'Please upload a PDF file' });
+    // Require at least one file to be uploaded
+    if (!result.imageUrl && !result.bannerImageUrl && !result.pdfUrl) {
+      return res.status(400).json({ 
+        message: 'No files uploaded. Please select an image, banner, or PDF.' 
+      });
     }
 
     console.log('📦 Upload Summary:');
