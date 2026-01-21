@@ -153,6 +153,7 @@ router.post('/multiple', protect, (req, res, next) => {
   upload.fields([
     { name: 'image', maxCount: 1 },
     { name: 'bannerImage', maxCount: 1 },
+    { name: 'bannerimage', maxCount: 1 }, // Accept lowercase for compatibility
     { name: 'pdf', maxCount: 1 }
   ])(req, res, (err) => {
     if (err) {
@@ -168,7 +169,7 @@ router.post('/multiple', protect, (req, res, next) => {
         }
         if (err.code === 'LIMIT_UNEXPECTED_FILE') {
           return res.status(400).json({ 
-            message: 'Unexpected file field. Only "image", "bannerImage", and "pdf" fields are allowed.',
+            message: 'Unexpected file field. Only "image", "bannerImage" (or "bannerimage"), and "pdf" fields are allowed.',
             error: err.message 
           });
         }
@@ -210,12 +211,14 @@ router.post('/multiple', protect, (req, res, next) => {
       console.log('   MIME Type:', files.image[0].mimetype);
     }
 
-    if (files.bannerImage && files.bannerImage[0]) {
-      result.bannerImageUrl = files.bannerImage[0].location;
+    // Handle both bannerImage (camelCase) and bannerimage (lowercase) for compatibility
+    const bannerImageFile = (files.bannerImage && files.bannerImage[0]) || (files.bannerimage && files.bannerimage[0]);
+    if (bannerImageFile) {
+      result.bannerImageUrl = bannerImageFile.location;
       console.log('✅ Banner Image uploaded to S3:');
-      console.log('   Banner Image URL:', files.bannerImage[0].location);
-      console.log('   Banner Image Key:', files.bannerImage[0].key);
-      console.log('   MIME Type:', files.bannerImage[0].mimetype);
+      console.log('   Banner Image URL:', bannerImageFile.location);
+      console.log('   Banner Image Key:', bannerImageFile.key);
+      console.log('   MIME Type:', bannerImageFile.mimetype);
     }
 
     if (files.pdf && files.pdf[0]) {
