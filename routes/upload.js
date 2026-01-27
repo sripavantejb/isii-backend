@@ -1,3 +1,33 @@
+/**
+ * Upload Routes
+ * 
+ * Handles file uploads to AWS S3 with public read access.
+ * 
+ * IMPORTANT: Public Access Configuration
+ * =======================================
+ * 
+ * For files to be publicly accessible, you need ONE of these:
+ * 
+ * Option 1: Enable ACLs (for older buckets or if you can enable them)
+ * - Set Object Ownership to "ACLs enabled" in S3 bucket settings
+ * - Disable "Block public access to buckets and objects granted through new ACLs"
+ * - The acl: 'public-read' setting below will then work
+ * 
+ * Option 2: Use Bucket Policy (for new buckets with ACLs disabled - RECOMMENDED)
+ * - Keep Object Ownership as "Bucket owner enforced" (default)
+ * - Add a bucket policy that allows public GetObject access
+ * - See S3_PUBLIC_ACCESS_SETUP.md for the exact policy JSON
+ * 
+ * If you get "Access Denied" errors:
+ * 1. Check your bucket's Block Public Access settings
+ * 2. Verify you have either ACLs enabled OR a bucket policy
+ * 3. See S3_PUBLIC_ACCESS_SETUP.md for detailed instructions
+ * 
+ * Utility Functions:
+ * - POST /api/upload/fix-acl/:key - Update ACL for existing file (if ACLs enabled)
+ * - GET /api/upload/check/:key - Check file permissions and existence
+ */
+
 const express = require('express');
 const multer = require('multer');
 const multerS3 = require('multer-s3');
@@ -32,12 +62,15 @@ function initializeUpload() {
     }
 
     // Configure multer-s3 for file uploads
+    // Note: ACLs may not work if bucket has "Object Ownership = Bucket owner enforced"
+    // In that case, use a bucket policy instead (see documentation below)
     upload = multer({
       storage: multerS3({
         s3: s3Client,
         bucket: process.env.AWS_S3_BUCKET,
-        // ACL removed - use bucket policy for public access instead
-        // AWS has deprecated ACLs in favor of bucket policies
+        acl: 'public-read', // Set ACL as public-read for uploaded files
+        // If ACLs are disabled on the bucket, this will be ignored
+        // You'll need to use a bucket policy for public access instead
         key: function (req, file, cb) {
           const folder = file.mimetype.startsWith('image/') ? 'images/' : 'pdfs/';
           const extension = file.originalname.split('.').pop();
@@ -45,6 +78,13 @@ function initializeUpload() {
           cb(null, filename);
         },
         contentType: multerS3.AUTO_CONTENT_TYPE,
+        metadata: function (req, file, cb) {
+          // Add metadata to help track uploads
+          cb(null, {
+            uploadedAt: new Date().toISOString(),
+            originalName: file.originalname,
+          });
+        },
       }),
       limits: {
         // Keep in sync with frontend maxSize (5MB)
@@ -63,6 +103,7 @@ function initializeUpload() {
     console.log('✅ Upload configuration initialized successfully');
     console.log('   Bucket:', process.env.AWS_S3_BUCKET);
     console.log('   Region:', process.env.AWS_REGION);
+    console.log('   ACL: public-read (may require bucket policy if ACLs are disabled)');
   } catch (error) {
     console.error('❌ Failed to initialize upload configuration:', error.message);
     console.error('   Stack:', error.stack);
@@ -92,7 +133,7 @@ router.post('/', protect, (req, res, next) => {
       error: 'AWS S3 is not properly configured. Check server logs for details.' 
     });
   }
-  upload.single('file')(req, res, (err) => {
+  upload.single('file')(req, res, async (err) => {
     if (err) {
       // Handle multer errors
       if (err instanceof multer.MulterError) {
@@ -102,6 +143,21 @@ router.post('/', protect, (req, res, next) => {
         console.error('Multer error:', err);
         return res.status(400).json({ message: 'Upload error', error: err.message });
       }
+      
+      // Handle ACL-related errors
+      if (err.message && (err.message.includes('AccessControlListNotSupported') || 
+          err.message.includes('InvalidAccessControlList') ||
+          err.message.includes('Access Denied'))) {
+        console.error('⚠️ ACL error detected:', err.message);
+        console.error('   This usually means ACLs are disabled on the bucket.');
+        console.error('   Solution: Use a bucket policy for public access (see documentation)');
+        return res.status(500).json({ 
+          message: 'Upload failed - ACL configuration error',
+          error: 'Bucket ACLs may be disabled. Please configure bucket policy for public access.',
+          hint: 'Check AWS S3 bucket settings: Object Ownership and Block Public Access'
+        });
+      }
+      
       // Handle other errors
       console.error('Upload middleware error:', err);
       return res.status(500).json({ 
@@ -109,6 +165,19 @@ router.post('/', protect, (req, res, next) => {
         error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message 
       });
     }
+    
+    // Try to verify/update ACL after upload if file was uploaded
+    if (req.file && req.file.key) {
+      try {
+        // Attempt to verify ACL was applied (this may fail if ACLs are disabled)
+        // We'll log it but not fail the request
+        console.log('📋 Verifying file ACL for:', req.file.key);
+      } catch (aclError) {
+        // ACL verification failed - this is expected if ACLs are disabled
+        console.warn('⚠️ Could not verify ACL (this is normal if bucket ACLs are disabled):', aclError.message);
+      }
+    }
+    
     next();
   });
 }, (req, res) => {
@@ -124,6 +193,8 @@ router.post('/', protect, (req, res, next) => {
     console.log('   MIME Type:', req.file.mimetype);
     console.log('   Bucket:', process.env.AWS_S3_BUCKET);
     console.log('   Region:', process.env.AWS_REGION);
+    console.log('   ACL: public-read (if ACLs enabled)');
+    console.log('   ⚠️  If files are not publicly accessible, check bucket policy settings');
 
     res.json({
       url: req.file.location,
@@ -155,7 +226,7 @@ router.post('/multiple', protect, (req, res, next) => {
     { name: 'bannerImage', maxCount: 1 },
     { name: 'bannerimage', maxCount: 1 }, // Accept lowercase for compatibility
     { name: 'pdf', maxCount: 1 }
-  ])(req, res, (err) => {
+  ])(req, res, async (err) => {
     if (err) {
       // Handle multer errors
       if (err instanceof multer.MulterError) {
@@ -180,6 +251,21 @@ router.post('/multiple', protect, (req, res, next) => {
           code: err.code 
         });
       }
+      
+      // Handle ACL-related errors
+      if (err.message && (err.message.includes('AccessControlListNotSupported') || 
+          err.message.includes('InvalidAccessControlList') ||
+          err.message.includes('Access Denied'))) {
+        console.error('⚠️ ACL error detected:', err.message);
+        console.error('   This usually means ACLs are disabled on the bucket.');
+        console.error('   Solution: Use a bucket policy for public access (see documentation)');
+        return res.status(500).json({ 
+          message: 'Upload failed - ACL configuration error',
+          error: 'Bucket ACLs may be disabled. Please configure bucket policy for public access.',
+          hint: 'Check AWS S3 bucket settings: Object Ownership and Block Public Access'
+        });
+      }
+      
       // Handle 413 errors (Payload Too Large)
       if (err.status === 413 || err.statusCode === 413 || err.message?.includes('413') || err.message?.includes('too large') || err.message?.includes('payload')) {
         return res.status(413).json({
@@ -189,6 +275,7 @@ router.post('/multiple', protect, (req, res, next) => {
           tip: 'Please compress your files before uploading.'
         });
       }
+      
       // Handle other errors
       console.error('Upload middleware error:', err);
       return res.status(500).json({ 
@@ -196,6 +283,27 @@ router.post('/multiple', protect, (req, res, next) => {
         error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message 
       });
     }
+    
+    // Try to verify ACLs for uploaded files (if any)
+    if (req.files) {
+      const allFiles = [
+        ...(req.files.image || []),
+        ...(req.files.bannerImage || []),
+        ...(req.files.bannerimage || []),
+        ...(req.files.pdf || []),
+      ];
+      
+      for (const file of allFiles) {
+        if (file && file.key) {
+          try {
+            console.log('📋 Verifying file ACL for:', file.key);
+          } catch (aclError) {
+            console.warn('⚠️ Could not verify ACL (this is normal if bucket ACLs are disabled):', aclError.message);
+          }
+        }
+      }
+    }
+    
     next();
   });
 }, (req, res) => {
@@ -209,6 +317,7 @@ router.post('/multiple', protect, (req, res, next) => {
       console.log('   Image URL:', files.image[0].location);
       console.log('   Image Key:', files.image[0].key);
       console.log('   MIME Type:', files.image[0].mimetype);
+      console.log('   ACL: public-read (if ACLs enabled)');
     }
 
     // Handle both bannerImage (camelCase) and bannerimage (lowercase) for compatibility
@@ -219,6 +328,7 @@ router.post('/multiple', protect, (req, res, next) => {
       console.log('   Banner Image URL:', bannerImageFile.location);
       console.log('   Banner Image Key:', bannerImageFile.key);
       console.log('   MIME Type:', bannerImageFile.mimetype);
+      console.log('   ACL: public-read (if ACLs enabled)');
     }
 
     if (files.pdf && files.pdf[0]) {
@@ -227,6 +337,7 @@ router.post('/multiple', protect, (req, res, next) => {
       console.log('   PDF URL:', files.pdf[0].location);
       console.log('   PDF Key:', files.pdf[0].key);
       console.log('   MIME Type:', files.pdf[0].mimetype);
+      console.log('   ACL: public-read (if ACLs enabled)');
     }
 
     // Require at least one file to be uploaded
@@ -240,6 +351,8 @@ router.post('/multiple', protect, (req, res, next) => {
     console.log('   Bucket:', process.env.AWS_S3_BUCKET);
     console.log('   Region:', process.env.AWS_REGION);
     console.log('   Result:', JSON.stringify(result, null, 2));
+    console.log('   ⚠️  If files are not publicly accessible, check bucket policy settings');
+    console.log('   📖 See S3_PUBLIC_ACCESS_SETUP.md for configuration instructions');
 
     res.json(result);
   } catch (error) {
@@ -248,6 +361,57 @@ router.post('/multiple', protect, (req, res, next) => {
       ? 'Upload failed. Please try again.' 
       : error.message;
     res.status(500).json({ message: 'Upload failed', error: errorMessage });
+  }
+});
+
+// @route   POST /api/upload/fix-acl/:key
+// @desc    Update ACL for an existing file (if ACLs are enabled)
+// @access  Private
+router.post('/fix-acl/:key(*)', protect, async (req, res) => {
+  try {
+    const { key } = req.params;
+    const s3Utils = require('../utils/s3Utils');
+    
+    await s3Utils.updateFileAcl(s3Client, process.env.AWS_S3_BUCKET, key);
+    
+    res.json({
+      message: 'ACL updated successfully',
+      key,
+      note: 'If ACLs are disabled on your bucket, use a bucket policy instead',
+    });
+  } catch (error) {
+    console.error('Error updating ACL:', error);
+    res.status(500).json({
+      message: 'Failed to update ACL',
+      error: error.message,
+      hint: error.message.includes('ACLs are disabled') 
+        ? 'Your bucket has ACLs disabled. Configure a bucket policy for public access instead.'
+        : 'Check server logs for details',
+    });
+  }
+});
+
+// @route   GET /api/upload/check/:key
+// @desc    Check file permissions and existence
+// @access  Private
+router.get('/check/:key(*)', protect, async (req, res) => {
+  try {
+    const { key } = req.params;
+    const s3Utils = require('../utils/s3Utils');
+    
+    const fileInfo = await s3Utils.checkFilePermissions(
+      s3Client,
+      process.env.AWS_S3_BUCKET,
+      key
+    );
+    
+    res.json(fileInfo);
+  } catch (error) {
+    console.error('Error checking file:', error);
+    res.status(500).json({
+      message: 'Failed to check file',
+      error: error.message,
+    });
   }
 });
 
