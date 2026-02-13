@@ -113,6 +113,7 @@ const ensureDBConnection = async (req, res, next) => {
 // Routes (with DB connection middleware)
 app.use('/api/auth', ensureDBConnection, require('./routes/auth'));
 app.use('/api/articles', ensureDBConnection, require('./routes/articles'));
+app.use('/api/reports', ensureDBConnection, require('./routes/reports'));
 app.use('/api/upload', ensureDBConnection, require('./routes/upload'));
 
 // Global error handler - ensure CORS headers are always set
@@ -151,6 +152,13 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Start server when running locally (not in Vercel serverless)
+if (require.main === module) {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`✅ Server listening on port ${PORT}`);
+  });
+}
+
 // Export app for Vercel serverless functions
 module.exports = app;
-
