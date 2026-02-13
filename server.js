@@ -113,7 +113,6 @@ const ensureDBConnection = async (req, res, next) => {
 // Routes (with DB connection middleware)
 app.use('/api/auth', ensureDBConnection, require('./routes/auth'));
 app.use('/api/articles', ensureDBConnection, require('./routes/articles'));
-app.use('/api/reports', ensureDBConnection, require('./routes/reports'));
 app.use('/api/upload', ensureDBConnection, require('./routes/upload'));
 
 // Global error handler - ensure CORS headers are always set
