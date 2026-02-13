@@ -152,13 +152,5 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server when running locally (not in Vercel serverless)
-if (require.main === module) {
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
-    console.log(`✅ Server listening on port ${PORT}`);
-  });
-}
-
 // Export app for Vercel serverless functions
 module.exports = app;
