@@ -367,9 +367,16 @@ router.post('/multiple', protect, (req, res, next) => {
 // @route   POST /api/upload/fix-acl/:key
 // @desc    Update ACL for an existing file (if ACLs are enabled)
 // @access  Private
-router.post('/fix-acl/:key(*)', protect, async (req, res) => {
+router.post('/fix-acl/*key', protect, async (req, res) => {
   try {
-    const { key } = req.params;
+    const key = Array.isArray(req.params.key)
+      ? req.params.key.join('/')
+      : req.params.key;
+
+    if (!key) {
+      return res.status(400).json({ message: 'File key is required' });
+    }
+
     const s3Utils = require('../utils/s3Utils');
     
     await s3Utils.updateFileAcl(s3Client, process.env.AWS_S3_BUCKET, key);
@@ -394,9 +401,16 @@ router.post('/fix-acl/:key(*)', protect, async (req, res) => {
 // @route   GET /api/upload/check/:key
 // @desc    Check file permissions and existence
 // @access  Private
-router.get('/check/:key(*)', protect, async (req, res) => {
+router.get('/check/*key', protect, async (req, res) => {
   try {
-    const { key } = req.params;
+    const key = Array.isArray(req.params.key)
+      ? req.params.key.join('/')
+      : req.params.key;
+
+    if (!key) {
+      return res.status(400).json({ message: 'File key is required' });
+    }
+
     const s3Utils = require('../utils/s3Utils');
     
     const fileInfo = await s3Utils.checkFilePermissions(
