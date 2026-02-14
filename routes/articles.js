@@ -94,9 +94,7 @@ router.post('/', protect, async (req, res, next) => {
     console.log('📝 POST /api/articles - Request received');
     console.log('   Request body:', JSON.stringify(req.body, null, 2));
     console.log('   MongoDB connection state:', mongoose.connection.readyState);
-    // 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
 
-    // Check MongoDB connection
     if (mongoose.connection.readyState !== 1) {
       console.error('❌ MongoDB is not connected. State:', mongoose.connection.readyState);
       return res.status(500).json({ 
@@ -107,7 +105,6 @@ router.post('/', protect, async (req, res, next) => {
 
     const { title, date, imageUrl, bannerImageUrl, pdfUrl } = req.body;
 
-    // Validate required fields (check for empty strings too)
     const missingFields = [];
     if (!title || title.trim() === '') missingFields.push('title');
     if (!date || date.trim() === '') missingFields.push('date');
@@ -115,13 +112,6 @@ router.post('/', protect, async (req, res, next) => {
 
     if (missingFields.length > 0) {
       console.error('❌ Missing or empty required fields:', missingFields);
-      console.error('   Received data:', {
-        title: title || '(empty)',
-        date: date || '(empty)',
-        imageUrl: imageUrl ? `${imageUrl.substring(0, 50)}...` : '(empty)',
-        bannerImageUrl: bannerImageUrl ? `${bannerImageUrl.substring(0, 50)}...` : '(empty)',
-        pdfUrl: pdfUrl ? `${pdfUrl.substring(0, 50)}...` : '(empty)',
-      });
       return res.status(400).json({ 
         message: 'Please provide all fields',
         missing: missingFields
@@ -129,14 +119,6 @@ router.post('/', protect, async (req, res, next) => {
     }
 
     console.log('📝 Creating article in database...');
-    console.log('   Article data:', {
-      title: title.substring(0, 50),
-      date,
-      imageUrl: imageUrl ? imageUrl.substring(0, 80) : '(empty)',
-      bannerImageUrl: bannerImageUrl ? bannerImageUrl.substring(0, 80) : '(empty)',
-      pdfUrl: pdfUrl.substring(0, 80),
-    });
-
     const article = await Article.create({
       title: title.trim(),
       date: date.trim(),
@@ -145,42 +127,20 @@ router.post('/', protect, async (req, res, next) => {
       pdfUrl: pdfUrl.trim(),
     });
 
-    console.log('✅ Article created successfully:', {
-      id: article._id,
-      title: article.title,
-      date: article.date,
-    });
+    console.log('✅ Article created successfully:', { id: article._id });
     
     return res.status(201).json(article);
   } catch (error) {
     console.error('❌ Error creating article:', error);
-    console.error('   Error name:', error?.name);
-    console.error('   Error message:', error?.message);
-    console.error('   Error stack:', error?.stack);
-    
-    // Handle Mongoose validation errors
     if (error?.name === 'ValidationError') {
       const errors = Object.values(error.errors).map(err => err.message);
-      return res.status(400).json({ 
-        message: 'Validation error',
-        errors: errors
-      });
+      return res.status(400).json({ message: 'Validation error', errors: errors });
     }
-
-    // Handle duplicate key errors
     if (error?.code === 11000) {
-      return res.status(400).json({ 
-        message: 'Duplicate entry',
-        error: 'An article with this information already exists'
-      });
+      return res.status(400).json({ message: 'Duplicate entry', error: 'An article with this information already exists' });
     }
-
-    // If response hasn't been sent, send error response
     if (!res.headersSent) {
-      return res.status(500).json({ 
-        message: 'Server error',
-        error: process.env.NODE_ENV === 'production' ? 'Internal server error' : (error?.message || 'Unknown error')
-      });
+      return res.status(500).json({ message: 'Server error', error: process.env.NODE_ENV === 'production' ? 'Internal server error' : (error?.message || 'Unknown error') });
     }
   }
 });
@@ -235,4 +195,3 @@ router.delete('/:id', protect, async (req, res) => {
 });
 
 module.exports = router;
-
