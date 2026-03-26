@@ -89,6 +89,7 @@ const ensureDBConnection = async (req, res, next) => {
 // Routes
 app.use('/api/auth', ensureDBConnection, require('./routes/auth'));
 app.use('/api/articles', ensureDBConnection, require('./routes/articles'));
+app.use('/api/news', ensureDBConnection, require('./routes/news'));
 app.use('/api/reports', ensureDBConnection, require('./routes/reports')); // ADDED
 app.use('/api/upload', ensureDBConnection, require('./routes/upload'));
 
