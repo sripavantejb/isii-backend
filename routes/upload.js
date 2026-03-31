@@ -32,6 +32,7 @@ const express = require('express');
 const multer = require('multer');
 const multerS3 = require('multer-s3');
 const crypto = require('crypto');
+const path = require('path');
 const { protect } = require('../middleware/auth');
 // dotenv is already loaded in config/aws.js and server.js, no need to load again
 
@@ -46,6 +47,32 @@ const generateUUID = () => {
     // Fallback for older Node.js versions
     return crypto.randomBytes(16).toString('hex');
   }
+};
+
+const generateShortSuffix = () => crypto.randomBytes(3).toString('hex');
+
+const sanitizeUploadedBaseName = (originalName = 'file-upload') => {
+  const { name } = path.parse(originalName);
+
+  return (
+    name
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9\s_-]/g, '')
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^[-_]+|[-_]+$/g, '')
+      .toLowerCase() || 'file-upload'
+  );
+};
+
+const getSafeExtension = (originalName = '') => path.extname(originalName).toLowerCase();
+
+const buildReadableKey = (folder, originalName) => {
+  const baseName = sanitizeUploadedBaseName(originalName);
+  const extension = getSafeExtension(originalName);
+  return `${folder}${baseName}-${generateShortSuffix()}${extension}`;
 };
 
 // Initialize S3 client and multer configuration
@@ -72,10 +99,21 @@ function initializeUpload() {
         // If ACLs are disabled on the bucket, this will be ignored
         // You'll need to use a bucket policy for public access instead
         key: function (req, file, cb) {
-          const folder = file.mimetype.startsWith('image/') ? 'images/' : 'pdfs/';
-          const extension = file.originalname.split('.').pop();
-          const filename = `${folder}${Date.now()}-${generateUUID()}.${extension}`;
-          cb(null, filename);
+          let folder = 'files/';
+          if (file.mimetype.startsWith('image/')) {
+            folder = 'images/';
+          } else if (file.mimetype === 'application/pdf') {
+            folder = 'pdfs/';
+          }
+
+          if (folder === 'images/') {
+            const extension = getSafeExtension(file.originalname);
+            const filename = `${folder}${Date.now()}-${generateUUID()}${extension}`;
+            cb(null, filename);
+            return;
+          }
+
+          cb(null, buildReadableKey(folder, file.originalname));
         },
         contentType: multerS3.AUTO_CONTENT_TYPE,
         metadata: function (req, file, cb) {
@@ -87,16 +125,10 @@ function initializeUpload() {
         },
       }),
       limits: {
-        // Keep in sync with frontend maxSize (5MB)
-        fileSize: 5 * 1024 * 1024,
+        fileSize: 10 * 1024 * 1024,
       },
       fileFilter: (req, file, cb) => {
-        // Allow images and PDFs
-        if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf') {
-          cb(null, true);
-        } else {
-          cb(new Error('Only images and PDF files are allowed'), false);
-        }
+        cb(null, true);
       },
     });
     
@@ -138,7 +170,7 @@ router.post('/', protect, (req, res, next) => {
       // Handle multer errors
       if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
-          return res.status(400).json({ message: 'File too large. Maximum size is 5MB.' });
+          return res.status(400).json({ message: 'File too large. Maximum size is 10MB.' });
         }
         console.error('Multer error:', err);
         return res.status(400).json({ message: 'Upload error', error: err.message });

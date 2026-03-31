@@ -15,25 +15,38 @@ const normalizeNewsPayload = (payload = {}) => {
     imageUrl: typeof payload.imageUrl === 'string' ? payload.imageUrl.trim() : '',
     articleURL:
       typeof payload.articleURL === 'string' ? payload.articleURL.trim() : '',
+    articleFileUrl:
+      typeof payload.articleFileUrl === 'string' ? payload.articleFileUrl.trim() : '',
     publishedAt,
   };
 };
 
 const validateNewsPayload = (payload) => {
   const errors = [];
+  let message = '';
 
   if (!payload.title) errors.push('title');
   if (!payload.description) errors.push('description');
   if (!payload.imageUrl) errors.push('imageUrl');
-  if (!payload.articleURL) errors.push('articleURL');
-  if (
-    payload.publishedAt !== null &&
-    (!(payload.publishedAt instanceof Date) || Number.isNaN(payload.publishedAt.getTime()))
-  ) {
+  if (!payload.articleURL && !payload.articleFileUrl) {
+    errors.push('readMoreTarget');
+    message = 'Please provide either an external article URL or an uploaded file';
+  }
+  if (payload.articleURL && payload.articleFileUrl) {
+    errors.push('readMoreTarget');
+    message = 'Please choose either an external article URL or an uploaded file, not both';
+  }
+  if (!(payload.publishedAt instanceof Date) || Number.isNaN(payload.publishedAt.getTime())) {
     errors.push('publishedAt');
+    if (!message) {
+      message = 'Please provide all required fields';
+    }
   }
 
-  return errors;
+  return {
+    errors,
+    message: message || 'Please provide all required fields',
+  };
 };
 
 // @route   GET /api/news
@@ -77,12 +90,12 @@ router.post('/', protect, async (req, res) => {
     }
 
     const normalizedPayload = normalizeNewsPayload(req.body);
-    const missingFields = validateNewsPayload(normalizedPayload);
+    const validationResult = validateNewsPayload(normalizedPayload);
 
-    if (missingFields.length > 0) {
+    if (validationResult.errors.length > 0) {
       return res.status(400).json({
-        message: 'Please provide all required fields',
-        missing: missingFields,
+        message: validationResult.message,
+        missing: validationResult.errors,
       });
     }
 
@@ -110,12 +123,12 @@ router.put('/:id', protect, async (req, res) => {
     }
 
     const normalizedPayload = normalizeNewsPayload(req.body);
-    const missingFields = validateNewsPayload(normalizedPayload);
+    const validationResult = validateNewsPayload(normalizedPayload);
 
-    if (missingFields.length > 0) {
+    if (validationResult.errors.length > 0) {
       return res.status(400).json({
-        message: 'Please provide all required fields',
-        missing: missingFields,
+        message: validationResult.message,
+        missing: validationResult.errors,
       });
     }
 
@@ -123,6 +136,7 @@ router.put('/:id', protect, async (req, res) => {
     newsItem.description = normalizedPayload.description;
     newsItem.imageUrl = normalizedPayload.imageUrl;
     newsItem.articleURL = normalizedPayload.articleURL;
+    newsItem.articleFileUrl = normalizedPayload.articleFileUrl;
     newsItem.publishedAt = normalizedPayload.publishedAt;
 
     const updatedNewsItem = await newsItem.save();

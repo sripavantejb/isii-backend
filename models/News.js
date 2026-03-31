@@ -30,21 +30,53 @@ const newsSchema = new mongoose.Schema(
     },
     articleURL: {
       type: String,
-      required: [true, 'Please provide an article URL'],
       trim: true,
       validate: {
-        validator: isValidUrl,
+        validator: (value) => !value || isValidUrl(value),
         message: 'Please provide a valid article URL',
+      },
+    },
+    articleFileUrl: {
+      type: String,
+      trim: true,
+      default: '',
+      validate: {
+        validator: (value) => !value || isValidUrl(value),
+        message: 'Please provide a valid uploaded file URL',
       },
     },
     publishedAt: {
       type: Date,
-      default: null,
+      required: [true, 'Please provide a published date and time'],
     },
   },
   {
     timestamps: true,
   }
 );
+
+newsSchema.pre('validate', function () {
+  const hasArticleUrl = Boolean(this.articleURL && this.articleURL.trim());
+  const hasArticleFileUrl = Boolean(this.articleFileUrl && this.articleFileUrl.trim());
+
+  if (!hasArticleUrl && !hasArticleFileUrl) {
+    this.invalidate(
+      'articleURL',
+      'Please provide either an external article URL or an uploaded file'
+    );
+  }
+
+  if (hasArticleUrl && hasArticleFileUrl) {
+    this.invalidate(
+      'articleURL',
+      'Please choose either an external article URL or an uploaded file, not both'
+    );
+    this.invalidate(
+      'articleFileUrl',
+      'Please choose either an external article URL or an uploaded file, not both'
+    );
+  }
+
+});
 
 module.exports = mongoose.model('News', newsSchema);
