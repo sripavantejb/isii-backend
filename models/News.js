@@ -45,6 +45,11 @@ const newsSchema = new mongoose.Schema(
         message: 'Please provide a valid uploaded file URL',
       },
     },
+    slug: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     publishedAt: {
       type: Date,
       required: [true, 'Please provide a published date and time'],

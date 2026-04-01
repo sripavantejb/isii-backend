@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const Article = require('../models/Article');
 const { protect } = require('../middleware/auth');
+const { extractSlugFromUrl } = require('../utils/fileSlug');
 
 const router = express.Router();
 
@@ -125,6 +126,7 @@ router.post('/', protect, async (req, res, next) => {
       imageUrl: imageUrl ? imageUrl.trim() : '',
       bannerImageUrl: bannerImageUrl ? bannerImageUrl.trim() : '',
       pdfUrl: pdfUrl.trim(),
+      slug: extractSlugFromUrl(pdfUrl.trim()),
     });
 
     console.log('✅ Article created successfully:', { id: article._id });
@@ -151,6 +153,7 @@ router.post('/', protect, async (req, res, next) => {
 router.put('/:id', protect, async (req, res) => {
   try {
     const { title, date, imageUrl, bannerImageUrl, pdfUrl } = req.body;
+    const trimmedPdfUrl = typeof pdfUrl === 'string' ? pdfUrl.trim() : '';
 
     const article = await Article.findById(req.params.id);
 
@@ -162,7 +165,8 @@ router.put('/:id', protect, async (req, res) => {
     article.date = date || article.date;
     article.imageUrl = imageUrl !== undefined ? imageUrl : article.imageUrl;
     article.bannerImageUrl = bannerImageUrl !== undefined ? bannerImageUrl : article.bannerImageUrl;
-    article.pdfUrl = pdfUrl || article.pdfUrl;
+    article.pdfUrl = trimmedPdfUrl || article.pdfUrl;
+    article.slug = trimmedPdfUrl ? extractSlugFromUrl(trimmedPdfUrl) : article.slug;
     article.updatedAt = Date.now();
 
     const updatedArticle = await article.save();

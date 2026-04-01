@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const News = require('../models/News');
 const { protect } = require('../middleware/auth');
+const { extractSlugFromUrl } = require('../utils/fileSlug');
 
 const router = express.Router();
 
@@ -17,6 +18,10 @@ const normalizeNewsPayload = (payload = {}) => {
       typeof payload.articleURL === 'string' ? payload.articleURL.trim() : '',
     articleFileUrl:
       typeof payload.articleFileUrl === 'string' ? payload.articleFileUrl.trim() : '',
+    slug:
+      typeof payload.articleFileUrl === 'string' && payload.articleFileUrl.trim()
+        ? extractSlugFromUrl(payload.articleFileUrl.trim())
+        : '',
     publishedAt,
   };
 };
@@ -137,6 +142,7 @@ router.put('/:id', protect, async (req, res) => {
     newsItem.imageUrl = normalizedPayload.imageUrl;
     newsItem.articleURL = normalizedPayload.articleURL;
     newsItem.articleFileUrl = normalizedPayload.articleFileUrl;
+    newsItem.slug = normalizedPayload.slug;
     newsItem.publishedAt = normalizedPayload.publishedAt;
 
     const updatedNewsItem = await newsItem.save();
