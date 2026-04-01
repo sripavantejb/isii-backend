@@ -22,6 +22,11 @@ const articleSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please provide a PDF URL'],
   },
+  slug: {
+    type: String,
+    trim: true,
+    default: '',
+  },
   createdAt: {
     type: Date,
     default: Date.now,

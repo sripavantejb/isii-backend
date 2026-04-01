@@ -33,7 +33,16 @@ const multer = require('multer');
 const multerS3 = require('multer-s3');
 const crypto = require('crypto');
 const path = require('path');
+const { HeadObjectCommand } = require('@aws-sdk/client-s3');
 const { protect } = require('../middleware/auth');
+const {
+  buildScopedUploadKey,
+  extractSlugFromKey,
+  getSafeExtension,
+  getUploadScopeFolder,
+  normalizeUploadScope,
+  sanitizeUploadedBaseName,
+} = require('../utils/fileSlug');
 // dotenv is already loaded in config/aws.js and server.js, no need to load again
 
 const router = express.Router();
@@ -51,28 +60,89 @@ const generateUUID = () => {
 
 const generateShortSuffix = () => crypto.randomBytes(3).toString('hex');
 
-const sanitizeUploadedBaseName = (originalName = 'file-upload') => {
-  const { name } = path.parse(originalName);
-
-  return (
-    name
-      .normalize('NFKD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-zA-Z0-9\s_-]/g, '')
-      .trim()
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^[-_]+|[-_]+$/g, '')
-      .toLowerCase() || 'file-upload'
-  );
-};
-
-const getSafeExtension = (originalName = '') => path.extname(originalName).toLowerCase();
-
-const buildReadableKey = (folder, originalName) => {
+const buildReadableKey = (folder, originalName, includeRandomSuffix = true) => {
   const baseName = sanitizeUploadedBaseName(originalName);
   const extension = getSafeExtension(originalName);
+
+  if (!includeRandomSuffix) {
+    return `${folder}${baseName}${extension}`;
+  }
+
   return `${folder}${baseName}-${generateShortSuffix()}${extension}`;
+};
+
+const getRequestedUploadScope = (req) => {
+  if (typeof req.query?.uploadScope === 'string') {
+    return normalizeUploadScope(req.query.uploadScope);
+  }
+
+  if (typeof req.query?.scope === 'string') {
+    return normalizeUploadScope(req.query.scope);
+  }
+
+  if (typeof req.body?.uploadScope === 'string') {
+    return normalizeUploadScope(req.body.uploadScope);
+  }
+
+  return '';
+};
+
+const isObjectMissing = (error) =>
+  error?.name === 'NotFound' ||
+  error?.name === 'NoSuchKey' ||
+  error?.$metadata?.httpStatusCode === 404;
+
+const doesObjectExist = async (key) => {
+  try {
+    await s3Client.send(
+      new HeadObjectCommand({
+        Bucket: process.env.AWS_S3_BUCKET,
+        Key: key,
+      })
+    );
+    return true;
+  } catch (error) {
+    if (isObjectMissing(error)) {
+      return false;
+    }
+
+    throw error;
+  }
+};
+
+const findAvailableScopedKey = async (folder, originalName) => {
+  let versionNumber = null;
+
+  while (true) {
+    const candidateKey = buildScopedUploadKey(folder, originalName, versionNumber);
+    const exists = await doesObjectExist(candidateKey);
+
+    if (!exists) {
+      return candidateKey;
+    }
+
+    versionNumber = versionNumber === null ? 1 : versionNumber + 1;
+  }
+};
+
+const buildUploadKeyForRequest = async (req, file) => {
+  if (file.mimetype.startsWith('image/')) {
+    const extension = getSafeExtension(file.originalname);
+    return `images/${Date.now()}-${generateUUID()}${extension}`;
+  }
+
+  const scopedFolder = getUploadScopeFolder(getRequestedUploadScope(req));
+
+  if (scopedFolder) {
+    return findAvailableScopedKey(scopedFolder, file.originalname);
+  }
+
+  let folder = 'files/';
+  if (file.mimetype === 'application/pdf') {
+    folder = 'pdfs/';
+  }
+
+  return buildReadableKey(folder, file.originalname);
 };
 
 // Initialize S3 client and multer configuration
@@ -98,22 +168,13 @@ function initializeUpload() {
         acl: 'public-read', // Set ACL as public-read for uploaded files
         // If ACLs are disabled on the bucket, this will be ignored
         // You'll need to use a bucket policy for public access instead
-        key: function (req, file, cb) {
-          let folder = 'files/';
-          if (file.mimetype.startsWith('image/')) {
-            folder = 'images/';
-          } else if (file.mimetype === 'application/pdf') {
-            folder = 'pdfs/';
+        key: async function (req, file, cb) {
+          try {
+            const key = await buildUploadKeyForRequest(req, file);
+            cb(null, key);
+          } catch (error) {
+            cb(error);
           }
-
-          if (folder === 'images/') {
-            const extension = getSafeExtension(file.originalname);
-            const filename = `${folder}${Date.now()}-${generateUUID()}${extension}`;
-            cb(null, filename);
-            return;
-          }
-
-          cb(null, buildReadableKey(folder, file.originalname));
         },
         contentType: multerS3.AUTO_CONTENT_TYPE,
         metadata: function (req, file, cb) {
@@ -190,6 +251,13 @@ router.post('/', protect, (req, res, next) => {
         });
       }
       
+      if (err.code === 'S3_KEY_EXISTS' || err.statusCode === 409) {
+        return res.status(409).json({
+          message: err.message,
+          error: 'Duplicate file name',
+        });
+      }
+
       // Handle other errors
       console.error('Upload middleware error:', err);
       return res.status(500).json({ 
@@ -231,6 +299,7 @@ router.post('/', protect, (req, res, next) => {
     res.json({
       url: req.file.location,
       key: req.file.key,
+      slug: extractSlugFromKey(req.file.key),
       mimetype: req.file.mimetype,
     });
   } catch (error) {
@@ -298,6 +367,13 @@ router.post('/multiple', protect, (req, res, next) => {
         });
       }
       
+      if (err.code === 'S3_KEY_EXISTS' || err.statusCode === 409) {
+        return res.status(409).json({
+          message: err.message,
+          error: 'Duplicate file name',
+        });
+      }
+
       // Handle 413 errors (Payload Too Large)
       if (err.status === 413 || err.statusCode === 413 || err.message?.includes('413') || err.message?.includes('too large') || err.message?.includes('payload')) {
         return res.status(413).json({
@@ -365,6 +441,7 @@ router.post('/multiple', protect, (req, res, next) => {
 
     if (files.pdf && files.pdf[0]) {
       result.pdfUrl = files.pdf[0].location;
+      result.pdfSlug = extractSlugFromKey(files.pdf[0].key);
       console.log('✅ PDF uploaded to S3:');
       console.log('   PDF URL:', files.pdf[0].location);
       console.log('   PDF Key:', files.pdf[0].key);
