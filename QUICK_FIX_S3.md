@@ -23,11 +23,11 @@ This will automatically create a bucket policy that allows public read access.
 #### Option B: Manual (If automatic doesn't work)
 
 1. Go to [AWS S3 Console](https://s3.console.aws.amazon.com/)
-2. Click on your bucket: `isii-v2`
+2. Click on your bucket: your environment bucket, such as `isii-dev`, `isii-staging`, or your production bucket
 3. Go to **Permissions** tab
 4. Scroll to **Bucket Policy** section
 5. Click **Edit**
-6. Paste this JSON (replace `isii-v2` with your bucket name if different):
+6. Paste this JSON and replace the bucket name with the environment bucket you are fixing:
 
 ```json
 {
@@ -38,7 +38,7 @@ This will automatically create a bucket policy that allows public read access.
       "Effect": "Allow",
       "Principal": "*",
       "Action": "s3:GetObject",
-      "Resource": "arn:aws:s3:::isii-v2/*"
+      "Resource": "arn:aws:s3:::YOUR_BUCKET_NAME/*"
     }
   ]
 }
@@ -51,7 +51,7 @@ This will automatically create a bucket policy that allows public read access.
 **This step MUST be done manually in AWS Console:**
 
 1. Go to [AWS S3 Console](https://s3.console.aws.amazon.com/)
-2. Click on your bucket: `isii-v2`
+2. Click on the bucket for the environment you are fixing
 3. Go to **Permissions** tab
 4. Scroll to **Block Public Access** settings
 5. Click **Edit**
@@ -66,7 +66,7 @@ This will automatically create a bucket policy that allows public read access.
 After completing both steps:
 
 1. Upload a new file through your application
-2. Copy the S3 URL (e.g., `https://isii-v2.s3.ap-south-1.amazonaws.com/images/...`)
+2. Copy the S3 URL for that bucket (for example `https://isii-staging.s3.ap-south-1.amazonaws.com/images/...`)
 3. Open the URL in a browser
 4. The file should now be accessible!
 

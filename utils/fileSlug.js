@@ -36,6 +36,23 @@ const normalizeUploadScope = (value = '') => {
 const getUploadScopeFolder = (value = '') =>
   UPLOAD_SCOPE_FOLDERS[normalizeUploadScope(value)] || '';
 
+// We currently isolate environments with separate buckets, so object keys do not
+// need an additional stage prefix.
+const getStageUploadPrefix = () => '';
+
+const applyStageUploadPrefix = (value = '') => {
+  const normalizedValue = String(value).replace(/^\/+/, '');
+  const prefix = getStageUploadPrefix();
+
+  if (!prefix || !normalizedValue) {
+    return normalizedValue;
+  }
+
+  return normalizedValue.startsWith(prefix)
+    ? normalizedValue
+    : `${prefix}${normalizedValue}`;
+};
+
 const buildScopedUploadKey = (folder, originalName, versionNumber = null) => {
   const baseName = sanitizeUploadedBaseName(originalName);
   const extension = getSafeExtension(originalName);
@@ -63,9 +80,11 @@ const extractSlugFromKey = (value = '') =>
 
 module.exports = {
   buildScopedUploadKey,
+  applyStageUploadPrefix,
   extractSlugFromKey,
   extractSlugFromUrl,
   getSafeExtension,
+  getStageUploadPrefix,
   getUploadScopeFolder,
   normalizeUploadScope,
   sanitizeUploadedBaseName,

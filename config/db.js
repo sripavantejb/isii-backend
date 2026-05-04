@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-require('dotenv').config();
+require('./loadEnv');
 
 // Cache the connection promise to avoid multiple simultaneous connection attempts
 let cachedConnection = null;
@@ -8,7 +8,7 @@ const connectDB = async () => {
   try {
     // Validate MONGODB_URI is set
     if (!process.env.MONGODB_URI) {
-      throw new Error('MONGODB_URI environment variable is not set. Please configure it in your Vercel environment variables.');
+      throw new Error('MONGODB_URI environment variable is not set. Please configure it in your deployment environment variables.');
     }
 
     // Check if already connected (readyState: 0=disconnected, 1=connected, 2=connecting, 3=disconnecting)
@@ -33,6 +33,7 @@ const connectDB = async () => {
     };
 
     // Cache the connection promise
+    console.log(process.env.MONGODB_URI)
     cachedConnection = mongoose.connect(process.env.MONGODB_URI, options).then((conn) => {
       console.log(`MongoDB Connected: ${conn.connection.host}`);
       cachedConnection = null; // Clear cache on success
@@ -49,11 +50,11 @@ const connectDB = async () => {
     
     // Provide helpful guidance based on error type
     if (error.message.includes('MONGODB_URI environment variable')) {
-      console.error('💡 Solution: Set MONGODB_URI in your Vercel environment variables.');
-      console.error('   1. Go to your Vercel project dashboard');
-      console.error('   2. Navigate to Settings > Environment Variables');
+      console.error('💡 Solution: Set MONGODB_URI in your deployment environment variables.');
+      console.error('   1. Open your AWS Lambda configuration');
+      console.error('   2. Navigate to Environment variables');
       console.error('   3. Add MONGODB_URI with your MongoDB connection string');
-      console.error('   4. Redeploy your application\n');
+      console.error('   4. Deploy the updated configuration\n');
     } else if (error.message.includes('IP') || error.message.includes('whitelist')) {
       console.error('💡 Solution: Your IP address needs to be whitelisted in MongoDB Atlas.');
       console.error('   1. Go to https://cloud.mongodb.com/');
@@ -69,7 +70,7 @@ const connectDB = async () => {
       console.error('   Verify the MONGODB_URI is correct\n');
     } else if (error.message.includes('uri parameter') || error.message.includes('openUri')) {
       console.error('💡 Solution: MONGODB_URI is missing or invalid');
-      console.error('   1. Check your Vercel environment variables');
+      console.error('   1. Check your deployment environment variables');
       console.error('   2. Ensure MONGODB_URI is set correctly');
       console.error('   3. Format should be: mongodb+srv://username:password@cluster.mongodb.net/dbname\n');
     }
@@ -82,4 +83,3 @@ const connectDB = async () => {
 };
 
 module.exports = connectDB;
-

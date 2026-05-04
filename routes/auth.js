@@ -45,7 +45,7 @@ router.post('/login', async (req, res) => {
       console.error('❌ JWT_SECRET is not set in environment variables');
       return res.status(500).json({ 
         message: 'Server configuration error',
-        error: 'JWT_SECRET environment variable is not set. Please configure it in Vercel environment variables.'
+        error: 'JWT_SECRET environment variable is not set. Please configure it in your deployment environment variables.'
       });
     }
 
@@ -64,7 +64,7 @@ router.post('/login', async (req, res) => {
     if (error.message && error.message.includes('JWT_SECRET')) {
       return res.status(500).json({ 
         message: 'Server configuration error',
-        error: 'JWT_SECRET environment variable is not set. Please configure it in Vercel environment variables.'
+        error: 'JWT_SECRET environment variable is not set. Please configure it in your deployment environment variables.'
       });
     }
     
@@ -76,4 +76,3 @@ router.post('/login', async (req, res) => {
 });
 
 module.exports = router;
-

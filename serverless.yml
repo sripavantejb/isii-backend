@@ -1,0 +1,102 @@
+service: isii-backend
+
+frameworkVersion: '^4.0.0'
+
+custom:
+  stage: ${sls:stage}
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, 'staging'}
+  region: ${opt:region, 'ap-south-1'}
+  architecture: x86_64
+  environment:
+    APP_STAGE: ${self:custom.stage}
+    NODE_ENV: production
+    MONGODB_URI: ${env:MONGODB_URI}
+    JWT_SECRET: ${env:JWT_SECRET}
+    AWS_S3_BUCKET: ${env:AWS_S3_BUCKET}
+    PUBLIC_FILES_BASE_URL: ${env:PUBLIC_FILES_BASE_URL, 'https://www.isii.global/files'}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:GetObject
+          Resource:
+            - arn:aws:s3:::${self:provider.environment.AWS_S3_BUCKET}/*
+        - Effect: Allow
+          Action:
+            - s3:ListBucket
+          Resource:
+            - arn:aws:s3:::${self:provider.environment.AWS_S3_BUCKET}
+
+package:
+  individually: true
+  patterns:
+    - '!.env'
+    - '!vercel.json'
+    - '!api/**/[...route].js'
+
+functions:
+  auth:
+    handler: api/auth/index.handler
+    memorySize: 512
+    timeout: 10
+    events:
+      - httpApi:
+          path: /api/auth
+          method: ANY
+      - httpApi:
+          path: /api/auth/{proxy+}
+          method: ANY
+
+  articles:
+    handler: api/articles/index.handler
+    memorySize: 512
+    timeout: 15
+    events:
+      - httpApi:
+          path: /api/articles
+          method: ANY
+      - httpApi:
+          path: /api/articles/{proxy+}
+          method: ANY
+
+  news:
+    handler: api/news/index.handler
+    memorySize: 512
+    timeout: 15
+    events:
+      - httpApi:
+          path: /api/news
+          method: ANY
+      - httpApi:
+          path: /api/news/{proxy+}
+          method: ANY
+
+  reports:
+    handler: api/reports/index.handler
+    memorySize: 512
+    timeout: 15
+    events:
+      - httpApi:
+          path: /api/reports
+          method: ANY
+      - httpApi:
+          path: /api/reports/{proxy+}
+          method: ANY
+
+  upload:
+    handler: api/upload/index.handler
+    memorySize: 1024
+    timeout: 30
+    events:
+      - httpApi:
+          path: /api/upload
+          method: ANY
+      - httpApi:
+          path: /api/upload/{proxy+}
+          method: ANY

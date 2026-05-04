@@ -1,7 +1,8 @@
-// Vercel serverless function entry point
-// Import the Express app
 const app = require('../server');
+const createLambdaHandler = require('../createLambdaHandler');
 
-// Export as a serverless function handler
 module.exports = app;
+module.exports.handler = createLambdaHandler(app);
+
+
 

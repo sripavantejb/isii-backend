@@ -12,7 +12,7 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const articles = await Article.find();
-    
+    console.log(articles)
     // Sort by date field (parsing "Month YYYY" format)
     // Latest dates first (descending order)
     articles.sort((a, b) => {
