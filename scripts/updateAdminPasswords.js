@@ -7,7 +7,7 @@ dotenv.config();
 const updateAdminPasswords = async () => {
   try {
     // Connect to MongoDB
-    const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://sripavantejb_db_user:isii@cluster0.93ufs41.mongodb.net/?appName=Cluster0';
+    const mongoUri = process.env.MONGODB_URI ;
     await mongoose.connect(mongoUri);
     console.log('MongoDB Connected');
 

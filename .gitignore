@@ -1,11 +1,11 @@
 # Environment variables
 .env
+.env.staging
 .env.local
 .env.*.local
 
 # Dependencies
 node_modules/
-package-lock.json
 
 # Logs
 logs
@@ -28,4 +28,3 @@ Thumbs.db
 # Build
 dist/
 build/
-
