@@ -19,7 +19,7 @@ jobs:
       AWS_REGION: ${{ vars.AWS_REGION }}
       MONGODB_URI: ${{ secrets.MONGODB_URI }}
       JWT_SECRET: ${{ secrets.JWT_SECRET }}
-      AWS_S3_BUCKET: isii-staging
+      AWS_S3_BUCKET: www.isii.global
       PUBLIC_FILES_BASE_URL: ${{ secrets.PUBLIC_FILES_BASE_URL }}
       SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
     steps:
