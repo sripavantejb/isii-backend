@@ -36,9 +36,53 @@ const normalizeUploadScope = (value = '') => {
 const getUploadScopeFolder = (value = '') =>
   UPLOAD_SCOPE_FOLDERS[normalizeUploadScope(value)] || '';
 
-// We currently isolate environments with separate buckets, so object keys do not
-// need an additional stage prefix.
-const getStageUploadPrefix = () => '';
+const resolveAppStage = () => {
+  const explicitStage = String(
+    process.env.APP_STAGE || process.env.STAGE || process.env.NODE_ENV || ''
+  )
+    .trim()
+    .toLowerCase();
+
+  if (explicitStage) {
+    return explicitStage;
+  }
+
+  const envFile = String(process.env.ENV_FILE || '')
+    .trim()
+    .toLowerCase();
+
+  if (envFile.includes('staging')) {
+    return 'staging';
+  }
+
+  if (envFile.includes('dev')) {
+    return 'development';
+  }
+
+  if (envFile.includes('prod')) {
+    return 'production';
+  }
+
+  return '';
+};
+
+const getStageUploadPrefix = () => {
+  const stage = resolveAppStage();
+
+  if (stage === 'production' || stage === 'prod') {
+    return 'prod/';
+  }
+
+  if (stage === 'staging' || stage === 'stage') {
+    return 'staging/';
+  }
+
+  if (stage === 'development' || stage === 'dev' || stage === 'local') {
+    return 'dev/';
+  }
+
+  return '';
+};
 
 const applyStageUploadPrefix = (value = '') => {
   const normalizedValue = String(value).replace(/^\/+/, '');
@@ -84,6 +128,7 @@ module.exports = {
   extractSlugFromKey,
   extractSlugFromUrl,
   getSafeExtension,
+  resolveAppStage,
   getStageUploadPrefix,
   getUploadScopeFolder,
   normalizeUploadScope,

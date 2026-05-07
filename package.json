@@ -14,7 +14,8 @@
     "remove:production": "serverless remove --stage production --region ap-south-1",
     "seed": "node scripts/seedAdmin.js",
     "diagnose-s3": "node scripts/diagnoseS3Access.js",
-    "fix-s3-access": "node scripts/fixS3PublicAccess.js"
+    "fix-s3-access": "node scripts/fixS3PublicAccess.js",
+    "migrate-s3-urls": "node scripts/migrateS3Urls.js"
   },
   "keywords": [],
   "author": "",

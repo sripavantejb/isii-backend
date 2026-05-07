@@ -30,7 +30,7 @@ const {
   normalizeUploadScope,
   sanitizeUploadedBaseName,
 } = require('../utils/fileSlug');
-const { buildPublicFileUrl } = require('../utils/publicFileUrl');
+const { buildPublicFileUrl, buildRawS3FileUrl } = require('../utils/publicFileUrl');
 // dotenv is already loaded in config/aws.js and server.js, no need to load again
 
 const router = express.Router();
@@ -274,8 +274,11 @@ router.post('/', protect, (req, res, next) => {
     }
 
     // Console log S3 URL and details
+    const rawUrl = buildRawS3FileUrl(req.file.key);
+    const publicUrl = buildPublicFileUrl(req.file.key);
     console.log('✅ File uploaded to S3 successfully:');
-    console.log('   Public URL:', buildPublicFileUrl(req.file.key));
+    console.log('   Raw S3 URL:', rawUrl);
+    console.log('   Public URL:', publicUrl);
     console.log('   S3 Key:', req.file.key);
     console.log('   MIME Type:', req.file.mimetype);
     console.log('   Bucket:', process.env.AWS_S3_BUCKET);
@@ -283,7 +286,8 @@ router.post('/', protect, (req, res, next) => {
     console.log('   Access model: bucket policy');
 
     res.json({
-      url: buildPublicFileUrl(req.file.key),
+      url: rawUrl,
+      publicUrl,
       key: req.file.key,
       slug: extractSlugFromKey(req.file.key),
       mimetype: req.file.mimetype,
@@ -371,9 +375,11 @@ router.post('/multiple', protect, (req, res, next) => {
     const result = {};
 
     if (files.image && files.image[0]) {
-      result.imageUrl = buildPublicFileUrl(files.image[0].key);
+      result.imageUrl = buildRawS3FileUrl(files.image[0].key);
+      result.imagePublicUrl = buildPublicFileUrl(files.image[0].key);
       console.log('✅ Image uploaded to S3:');
       console.log('   Image URL:', result.imageUrl);
+      console.log('   Image Public URL:', result.imagePublicUrl);
       console.log('   Image Key:', files.image[0].key);
       console.log('   MIME Type:', files.image[0].mimetype);
       console.log('   Access model: bucket policy');
@@ -382,19 +388,23 @@ router.post('/multiple', protect, (req, res, next) => {
     // Handle both bannerImage (camelCase) and bannerimage (lowercase) for compatibility
     const bannerImageFile = (files.bannerImage && files.bannerImage[0]) || (files.bannerimage && files.bannerimage[0]);
     if (bannerImageFile) {
-      result.bannerImageUrl = buildPublicFileUrl(bannerImageFile.key);
+      result.bannerImageUrl = buildRawS3FileUrl(bannerImageFile.key);
+      result.bannerImagePublicUrl = buildPublicFileUrl(bannerImageFile.key);
       console.log('✅ Banner Image uploaded to S3:');
       console.log('   Banner Image URL:', result.bannerImageUrl);
+      console.log('   Banner Image Public URL:', result.bannerImagePublicUrl);
       console.log('   Banner Image Key:', bannerImageFile.key);
       console.log('   MIME Type:', bannerImageFile.mimetype);
       console.log('   Access model: bucket policy');
     }
 
     if (files.pdf && files.pdf[0]) {
-      result.pdfUrl = buildPublicFileUrl(files.pdf[0].key);
+      result.pdfUrl = buildRawS3FileUrl(files.pdf[0].key);
+      result.pdfPublicUrl = buildPublicFileUrl(files.pdf[0].key);
       result.pdfSlug = extractSlugFromKey(files.pdf[0].key);
       console.log('✅ PDF uploaded to S3:');
       console.log('   PDF URL:', result.pdfUrl);
+      console.log('   PDF Public URL:', result.pdfPublicUrl);
       console.log('   PDF Key:', files.pdf[0].key);
       console.log('   MIME Type:', files.pdf[0].mimetype);
       console.log('   Access model: bucket policy');
