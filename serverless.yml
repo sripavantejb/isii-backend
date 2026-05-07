@@ -9,7 +9,7 @@ provider:
   name: aws
   runtime: nodejs20.x
   stage: ${opt:stage, 'staging'}
-  region: ${opt:region, 'us-east-1'}
+  region: ${opt:region, 'ap-south-1'}
   architecture: x86_64
   environment:
     APP_STAGE: ${self:custom.stage}
