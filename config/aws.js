@@ -15,7 +15,7 @@ function getS3Client() {
 
   try {
     const clientConfig = {
-      region: process.env.AWS_REGION,
+      region: process.env.AWS_S3_REGION || process.env.AWS_REGION,
     };
 
     // In AWS Lambda, prefer the default credential provider chain so the

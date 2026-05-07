@@ -12,7 +12,7 @@ const getPublicFilesBaseUrl = () =>
   trimTrailingSlashes(process.env.PUBLIC_FILES_BASE_URL || DEFAULT_PUBLIC_FILES_BASE_URL);
 
 const getRawS3BaseUrl = () => {
-  const region = String(process.env.AWS_REGION || '').trim();
+  const region = String(process.env.AWS_S3_REGION || process.env.AWS_REGION || '').trim();
   const bucket = String(process.env.AWS_S3_BUCKET || '').trim();
 
   if (!region || !bucket) {

@@ -17,6 +17,7 @@ provider:
     MONGODB_URI: ${env:MONGODB_URI}
     JWT_SECRET: ${env:JWT_SECRET}
     AWS_S3_BUCKET: ${env:AWS_S3_BUCKET}
+    AWS_S3_REGION: ${env:AWS_S3_REGION, 'ap-south-2'}
     PUBLIC_FILES_BASE_URL: ${env:PUBLIC_FILES_BASE_URL, 'https://www.isii.global/files'}
   iam:
     role:
