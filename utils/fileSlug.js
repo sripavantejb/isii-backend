@@ -67,20 +67,11 @@ const resolveAppStage = () => {
 };
 
 const getStageUploadPrefix = () => {
-  const stage = resolveAppStage();
-
-  if (stage === 'production' || stage === 'prod') {
-    return 'prod/';
-  }
-
-  if (stage === 'staging' || stage === 'stage') {
-    return 'staging/';
-  }
-
-  if (stage === 'development' || stage === 'dev' || stage === 'local') {
-    return 'dev/';
-  }
-
+  // Storage is now segregated into one bucket per environment
+  // (isii-files-dev / -staging / -prod), each serving content from its bucket
+  // ROOT through its own CloudFront distribution. The legacy dev/ staging/ prod/
+  // folder prefixes are therefore obsolete — uploads go to the root and the
+  // env is determined by which bucket (AWS_S3_BUCKET) the request targets.
   return '';
 };
 
