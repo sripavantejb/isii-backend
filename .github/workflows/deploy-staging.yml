@@ -19,9 +19,9 @@ jobs:
       AWS_REGION: ${{ vars.AWS_REGION }}
       MONGODB_URI: ${{ secrets.MONGODB_URI }}
       JWT_SECRET: ${{ secrets.JWT_SECRET }}
-      AWS_S3_BUCKET: isii-files-staging
+      AWS_S3_BUCKET: www.isii.global
       AWS_S3_REGION: ap-south-2
-      PUBLIC_FILES_BASE_URL: https://d1gbpolz5fkmu.cloudfront.net/files
+      PUBLIC_FILES_BASE_URL: ${{ secrets.PUBLIC_FILES_BASE_URL }}
       SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
     steps:
       - name: Checkout repository
