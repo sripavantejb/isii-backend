@@ -3,7 +3,7 @@ name: Deploy Backend Production
 on:
   push:
     branches:
-      - main
+      - prod-v2
   workflow_dispatch:
 
 permissions:
@@ -14,7 +14,7 @@ jobs:
   deploy:
     name: Deploy to production
     runs-on: ubuntu-latest
-    environment: production
+    environment: prod-v2
     env:
       AWS_REGION: ${{ vars.AWS_REGION }}
       MONGODB_URI: ${{ secrets.MONGODB_URI }}
