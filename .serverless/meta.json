@@ -1,0 +1,232 @@
+{
+  "/Users/home/Desktop/sai teja's vs code/mern/isii/isii-backend/serverless.yml": {
+    "versionFramework": "4.37.0",
+    "servicePath": "/Users/home/Desktop/sai teja's vs code/mern/isii/isii-backend/serverless.yml",
+    "serviceConfigFileName": "serverless.yml",
+    "service": {
+      "service": "isii-backend",
+      "frameworkVersion": "^4.0.0",
+      "custom": {
+        "stage": "production"
+      },
+      "provider": {
+        "name": "aws",
+        "runtime": "nodejs20.x",
+        "stage": "production",
+        "region": "us-east-1",
+        "architecture": "x86_64",
+        "environment": {
+          "APP_STAGE": "${self:custom.stage}",
+          "NODE_ENV": "production",
+          "MONGODB_URI": "",
+          "JWT_SECRET": "<REDACTED>",
+          "AWS_S3_BUCKET": "isii-files-dev",
+          "AWS_S3_REGION": "ap-south-2",
+          "PUBLIC_FILES_BASE_URL": "https://isii-files-dev.s3.ap-south-2.amazonaws.com/"
+        },
+        "iam": {
+          "role": {
+            "statements": [
+              {
+                "Effect": "Allow",
+                "Action": [
+                  "s3:PutObject",
+                  "s3:GetObject"
+                ],
+                "Resource": [
+                  "arn:aws:s3:::${self:provider.environment.AWS_S3_BUCKET}/*"
+                ]
+              },
+              {
+                "Effect": "Allow",
+                "Action": [
+                  "s3:ListBucket"
+                ],
+                "Resource": [
+                  "arn:aws:s3:::${self:provider.environment.AWS_S3_BUCKET}"
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "package": {
+        "individually": true,
+        "patterns": [
+          "!.env",
+          "!vercel.json",
+          "!api/**/[...route].js"
+        ]
+      },
+      "functions": {
+        "auth": {
+          "handler": "api/auth/index.handler",
+          "memorySize": 512,
+          "timeout": 10,
+          "events": [
+            {
+              "httpApi": {
+                "path": "/api/auth",
+                "method": "ANY"
+              }
+            },
+            {
+              "httpApi": {
+                "path": "/api/auth/{proxy+}",
+                "method": "ANY"
+              }
+            }
+          ]
+        },
+        "articles": {
+          "handler": "api/articles/index.handler",
+          "memorySize": 512,
+          "timeout": 15,
+          "events": [
+            {
+              "httpApi": {
+                "path": "/api/articles",
+                "method": "ANY"
+              }
+            },
+            {
+              "httpApi": {
+                "path": "/api/articles/{proxy+}",
+                "method": "ANY"
+              }
+            }
+          ]
+        },
+        "news": {
+          "handler": "api/news/index.handler",
+          "memorySize": 512,
+          "timeout": 15,
+          "events": [
+            {
+              "httpApi": {
+                "path": "/api/news",
+                "method": "ANY"
+              }
+            },
+            {
+              "httpApi": {
+                "path": "/api/news/{proxy+}",
+                "method": "ANY"
+              }
+            }
+          ]
+        },
+        "reports": {
+          "handler": "api/reports/index.handler",
+          "memorySize": 512,
+          "timeout": 15,
+          "events": [
+            {
+              "httpApi": {
+                "path": "/api/reports",
+                "method": "ANY"
+              }
+            },
+            {
+              "httpApi": {
+                "path": "/api/reports/{proxy+}",
+                "method": "ANY"
+              }
+            }
+          ]
+        },
+        "upload": {
+          "handler": "api/upload/index.handler",
+          "memorySize": 1024,
+          "timeout": 30,
+          "events": [
+            {
+              "httpApi": {
+                "path": "/api/upload",
+                "method": "ANY"
+              }
+            },
+            {
+              "httpApi": {
+                "path": "/api/upload/{proxy+}",
+                "method": "ANY"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "provider": {
+      "name": "aws",
+      "runtime": "nodejs20.x",
+      "stage": "production",
+      "region": "us-east-1",
+      "architecture": "x86_64",
+      "environment": {
+        "APP_STAGE": "${self:custom.stage}",
+        "NODE_ENV": "production",
+        "MONGODB_URI": "",
+        "JWT_SECRET": "<REDACTED>",
+        "AWS_S3_BUCKET": "isii-files-dev",
+        "AWS_S3_REGION": "ap-south-2",
+        "PUBLIC_FILES_BASE_URL": "https://isii-files-dev.s3.ap-south-2.amazonaws.com/"
+      },
+      "iam": {
+        "role": {
+          "statements": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:PutObject",
+                "s3:GetObject"
+              ],
+              "Resource": [
+                "arn:aws:s3:::${self:provider.environment.AWS_S3_BUCKET}/*"
+              ]
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:ListBucket"
+              ],
+              "Resource": [
+                "arn:aws:s3:::${self:provider.environment.AWS_S3_BUCKET}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "dashboard": {
+      "isEnabledForService": false,
+      "requiredAuthentication": false,
+      "orgFeaturesInUse": null,
+      "orgObservabilityIntegrations": null,
+      "serviceAppId": null,
+      "serviceProvider": null,
+      "instanceParameters": null
+    },
+    "error": {
+      "message": "Cannot resolve '${env:JWT_SECRET}' variable at 'provider.environment.JWT_SECRET'. No value is available for this variable, and no default value was provided. Please check your variable definitions or provide a default value.",
+      "stack": "Error: Cannot resolve '${env:JWT_SECRET}' variable at 'provider.environment.JWT_SECRET'. No value is available for this variable, and no default value was provided. Please check your variable definitions or provide a default value.\n    at _ResolverManager.resolve (file:///Users/home/.serverless/releases/4.37.0/package/dist/sf-core.js:1012:33616)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async #handlePlaceholderNode (file:///Users/home/.serverless/releases/4.37.0/package/dist/sf-core.js:1012:31794)\n    at async file:///Users/home/.serverless/releases/4.37.0/package/dist/sf-core.js:1012:29638\n    at async processNodeAndHandleCompletion (file:///Users/home/.serverless/releases/4.37.0/package/dist/sf-core.js:1012:18025)",
+      "code": "MISSING_VARIABLE_RESULT"
+    },
+    "serviceRawFile": "service: isii-backend\n\nframeworkVersion: '^4.0.0'\n\ncustom:\n  stage: ${sls:stage}\n\nprovider:\n  name: aws\n  runtime: nodejs20.x\n  stage: ${opt:stage, 'staging'}\n  region: ${opt:region, 'us-east-1'}\n  architecture: x86_64\n  environment:\n    APP_STAGE: ${self:custom.stage}\n    NODE_ENV: production\n    MONGODB_URI: ${env:MONGODB_URI}\n    JWT_SECRET: ${env:JWT_SECRET}\n    AWS_S3_BUCKET: ${env:AWS_S3_BUCKET}\n    AWS_S3_REGION: ${env:AWS_S3_REGION, 'ap-south-2'}\n    PUBLIC_FILES_BASE_URL: ${env:PUBLIC_FILES_BASE_URL, 'https://www.isii.global/files'}\n  iam:\n    role:\n      statements:\n        - Effect: Allow\n          Action:\n            - s3:PutObject\n            - s3:GetObject\n          Resource:\n            - arn:aws:s3:::${self:provider.environment.AWS_S3_BUCKET}/*\n        - Effect: Allow\n          Action:\n            - s3:ListBucket\n          Resource:\n            - arn:aws:s3:::${self:provider.environment.AWS_S3_BUCKET}\n\npackage:\n  individually: true\n  patterns:\n    - '!.env'\n    - '!vercel.json'\n    - '!api/**/[...route].js'\n\nfunctions:\n  auth:\n    handler: api/auth/index.handler\n    memorySize: 512\n    timeout: 10\n    events:\n      - httpApi:\n          path: /api/auth\n          method: ANY\n      - httpApi:\n          path: /api/auth/{proxy+}\n          method: ANY\n\n  articles:\n    handler: api/articles/index.handler\n    memorySize: 512\n    timeout: 15\n    events:\n      - httpApi:\n          path: /api/articles\n          method: ANY\n      - httpApi:\n          path: /api/articles/{proxy+}\n          method: ANY\n\n  news:\n    handler: api/news/index.handler\n    memorySize: 512\n    timeout: 15\n    events:\n      - httpApi:\n          path: /api/news\n          method: ANY\n      - httpApi:\n          path: /api/news/{proxy+}\n          method: ANY\n\n  reports:\n    handler: api/reports/index.handler\n    memorySize: 512\n    timeout: 15\n    events:\n      - httpApi:\n          path: /api/reports\n          method: ANY\n      - httpApi:\n          path: /api/reports/{proxy+}\n          method: ANY\n\n  upload:\n    handler: api/upload/index.handler\n    memorySize: 1024\n    timeout: 30\n    events:\n      - httpApi:\n          path: /api/upload\n          method: ANY\n      - httpApi:\n          path: /api/upload/{proxy+}\n          method: ANY\n",
+    "command": [
+      "deploy"
+    ],
+    "options": {
+      "stage": "production",
+      "region": "us-east-1"
+    },
+    "orgId": "a8d54a74-2f6e-4a12-8318-07cbf5e45241",
+    "orgName": "nxtwavepsm",
+    "userId": "XfyGk5v03wSs77DPGJ",
+    "userName": "nxtwavepsm",
+    "serviceProviderAwsCfStackId": null,
+    "serviceProviderAwsCfStackCreated": null,
+    "serviceProviderAwsCfStackUpdated": null,
+    "serviceProviderAwsCfStackStatus": null,
+    "serviceProviderAwsCfStackOutputs": null
+  }
+}

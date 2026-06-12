@@ -181,13 +181,13 @@ Important: because our workflow uses GitHub Environments, the `sub` condition mu
     {
       "Effect": "Allow",
       "Principal": {
-        "Federated": "arn:aws:iam::323001028873:oidc-provider/token.actions.githubusercontent.com"
+        "Federated": "arn:aws:iam::639920117892:oidc-provider/token.actions.githubusercontent.com"
       },
       "Action": "sts:AssumeRoleWithWebIdentity",
       "Condition": {
         "StringEquals": {
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-          "token.actions.githubusercontent.com:sub": "repo:niat-web/isii-backend-v3:environment:staging"
+          "token.actions.githubusercontent.com:sub": "repo:Nxtwave-Platform/isii-backend:environment:staging"
         }
       }
     }
@@ -204,13 +204,13 @@ Important: because our workflow uses GitHub Environments, the `sub` condition mu
     {
       "Effect": "Allow",
       "Principal": {
-        "Federated": "arn:aws:iam::323001028873:oidc-provider/token.actions.githubusercontent.com"
+        "Federated": "arn:aws:iam::639920117892:oidc-provider/token.actions.githubusercontent.com"
       },
       "Action": "sts:AssumeRoleWithWebIdentity",
       "Condition": {
         "StringEquals": {
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-          "token.actions.githubusercontent.com:sub": "repo:niat-web/isii-backend-v3:environment:production"
+          "token.actions.githubusercontent.com:sub": "repo:Nxtwave-Platform/isii-backend:environment:production"
         }
       }
     }
@@ -333,8 +333,8 @@ Cause:
 Fix:
 
 - changed trust policy `sub` to environment format:
-  - `repo:niat-web/isii-backend-v3:environment:staging`
-  - `repo:niat-web/isii-backend-v3:environment:production`
+  - `repo:Nxtwave-Platform/isii-backend:environment:staging`
+  - `repo:Nxtwave-Platform/isii-backend:environment:production`
 
 This was the key fix for OIDC.
 
