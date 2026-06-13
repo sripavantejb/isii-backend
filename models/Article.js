@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { parseMonthYearToDate } = require('../utils/parseContentDate');
 
 const articleSchema = new mongoose.Schema({
   title: {
@@ -27,6 +28,14 @@ const articleSchema = new mongoose.Schema({
     trim: true,
     default: '',
   },
+  // Real Date derived from the human `date` string ("December 2025"), used only
+  // for fast indexed sorting in the database. The `date` string remains the
+  // source of truth for display.
+  sortDate: {
+    type: Date,
+    default: null,
+    index: true,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -35,6 +44,13 @@ const articleSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+});
+
+// Keep sortDate in sync whenever the display date changes (runs on create and save).
+articleSchema.pre('save', function () {
+  if (this.isModified('date')) {
+    this.sortDate = parseMonthYearToDate(this.date);
+  }
 });
 
 module.exports = mongoose.model('Article', articleSchema);

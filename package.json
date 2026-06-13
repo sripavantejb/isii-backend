@@ -6,8 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "start:staging-local": "cross-env ENV_FILE=.env.staging node server.js",
-    "dev:staging": "cross-env ENV_FILE=.env.staging nodemon server.js",
+    "start:staging-local": "ENV_FILE=.env.staging node server.js",
+    "dev:staging": "ENV_FILE=.env.staging nodemon server.js",
     "deploy:staging": "serverless deploy --stage staging --region us-east-1",
     "deploy:production": "serverless deploy --stage production --region us-east-1",
     "remove:staging": "serverless remove --stage staging --region us-east-1",
@@ -15,7 +15,8 @@
     "seed": "node scripts/seedAdmin.js",
     "diagnose-s3": "node scripts/diagnoseS3Access.js",
     "fix-s3-access": "node scripts/fixS3PublicAccess.js",
-    "migrate-s3-urls": "node scripts/migrateS3Urls.js"
+    "migrate-s3-urls": "node scripts/migrateS3Urls.js",
+    "backfill-sort-date": "node scripts/backfillSortDate.js"
   },
   "keywords": [],
   "author": "",
@@ -36,7 +37,6 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
-    "cross-env": "^7.0.3",
     "serverless": "^4.34.0"
   }
 }

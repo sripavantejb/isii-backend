@@ -2,34 +2,22 @@ const express = require('express');
 const mongoose = require('mongoose');
 const Report = require('../models/Report');
 const { protect } = require('../middleware/auth');
+const { publicCache } = require('../utils/httpCache');
 
 const router = express.Router();
 
 // @route   GET /api/reports
 // @desc    Get all reports (Perspectives)
 // @access  Public
-router.get('/', async (req, res) => {
+router.get('/', publicCache(), async (req, res) => {
   try {
-    const reports = await Report.find();
-    
-    reports.sort((a, b) => {
-      const parseDate = (dateStr) => {
-        if (!dateStr || typeof dateStr !== 'string') return new Date(0);
-        try {
-          const months = { 'january': 0, 'february': 1, 'march': 2, 'april': 3, 'may': 4, 'june': 5, 'july': 6, 'august': 7, 'september': 8, 'october': 9, 'november': 10, 'december': 11 };
-          const parts = dateStr.trim().toLowerCase().split(/\s+/);
-          if (parts.length !== 2) return new Date(0);
-          const month = months[parts[0]];
-          const year = parseInt(parts[1], 10);
-          if (month === undefined || isNaN(year)) return new Date(0);
-          return new Date(year, month, 1);
-        } catch { return new Date(0); }
-      };
-      const dateA = parseDate(a.date);
-      const dateB = parseDate(b.date);
-      return dateB.getTime() - dateA.getTime();
-    });
-    
+    // Sorted by the database using the indexed sortDate (newest first).
+    // Records with an unparseable date (sortDate = null) sort to the end.
+    // .lean() returns plain objects for a faster, lighter response.
+    const reports = await Report.find()
+      .sort({ sortDate: -1, createdAt: -1 })
+      .lean();
+
     res.json(reports);
   } catch (error) {
     console.error(error);
@@ -40,7 +28,7 @@ router.get('/', async (req, res) => {
 // @route   GET /api/reports/:id
 // @desc    Get single report
 // @access  Public
-router.get('/:id', async (req, res) => {
+router.get('/:id', publicCache(), async (req, res) => {
   try {
     const report = await Report.findById(req.params.id);
     if (!report) return res.status(404).json({ message: 'Report not found' });

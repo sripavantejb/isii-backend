@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const News = require('../models/News');
 const { protect } = require('../middleware/auth');
 const { extractSlugFromUrl } = require('../utils/fileSlug');
+const { publicCache } = require('../utils/httpCache');
 
 const router = express.Router();
 
@@ -57,9 +58,9 @@ const validateNewsPayload = (payload) => {
 // @route   GET /api/news
 // @desc    Get all news
 // @access  Public
-router.get('/', async (req, res) => {
+router.get('/', publicCache(), async (req, res) => {
   try {
-    const newsItems = await News.find().sort({ publishedAt: -1, createdAt: -1 });
+    const newsItems = await News.find().sort({ publishedAt: -1, createdAt: -1 }).lean();
     res.json(newsItems);
   } catch (error) {
     console.error(error);
@@ -70,7 +71,7 @@ router.get('/', async (req, res) => {
 // @route   GET /api/news/:id
 // @desc    Get single news item
 // @access  Public
-router.get('/:id', async (req, res) => {
+router.get('/:id', publicCache(), async (req, res) => {
   try {
     const newsItem = await News.findById(req.params.id);
 
