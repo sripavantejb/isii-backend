@@ -15,7 +15,8 @@
     "seed": "node scripts/seedAdmin.js",
     "diagnose-s3": "node scripts/diagnoseS3Access.js",
     "fix-s3-access": "node scripts/fixS3PublicAccess.js",
-    "migrate-s3-urls": "node scripts/migrateS3Urls.js"
+    "migrate-s3-urls": "node scripts/migrateS3Urls.js",
+    "backfill-sort-date": "node scripts/backfillSortDate.js"
   },
   "keywords": [],
   "author": "",

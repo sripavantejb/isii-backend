@@ -3,65 +3,22 @@ const mongoose = require('mongoose');
 const Article = require('../models/Article');
 const { protect } = require('../middleware/auth');
 const { extractSlugFromUrl } = require('../utils/fileSlug');
+const { publicCache } = require('../utils/httpCache');
 
 const router = express.Router();
 
 // @route   GET /api/articles
 // @desc    Get all articles
 // @access  Public
-router.get('/', async (req, res) => {
+router.get('/', publicCache(), async (req, res) => {
   try {
-    const articles = await Article.find();
-    console.log(articles)
-    // Sort by date field (parsing "Month YYYY" format)
-    // Latest dates first (descending order)
-    articles.sort((a, b) => {
-      const parseDate = (dateStr) => {
-        if (!dateStr || typeof dateStr !== 'string') {
-          return new Date(0); // Invalid date - will be sorted to the end
-        }
-        
-        try {
-          // Parse "Month YYYY" format (e.g., "December 2025", "January 1990")
-          const months = {
-            'january': 0, 'february': 1, 'march': 2, 'april': 3,
-            'may': 4, 'june': 5, 'july': 6, 'august': 7,
-            'september': 8, 'october': 9, 'november': 10, 'december': 11
-          };
-          
-          const trimmed = dateStr.trim().toLowerCase();
-          const parts = trimmed.split(/\s+/);
-          
-          if (parts.length !== 2) {
-            return new Date(0); // Invalid format
-          }
-          
-          const monthName = parts[0];
-          const month = months[monthName];
-          const year = parseInt(parts[1], 10);
-          
-          if (month === undefined || isNaN(year) || year < 1900 || year > 2100) {
-            return new Date(0); // Invalid month or year
-          }
-          
-          return new Date(year, month, 1);
-        } catch (error) {
-          return new Date(0); // Return epoch for invalid dates
-        }
-      };
-      
-      const dateA = parseDate(a.date);
-      const dateB = parseDate(b.date);
-      
-      // Sort descending (newest first)
-      // Invalid dates (epoch) will be sorted to the end
-      if (dateA.getTime() === 0 && dateB.getTime() === 0) return 0;
-      if (dateA.getTime() === 0) return 1; // Invalid dates go to end
-      if (dateB.getTime() === 0) return -1; // Valid dates come first
-      
-      return dateB.getTime() - dateA.getTime();
-    });
-    
+    // Sorted by the database using the indexed sortDate (newest first).
+    // Records with an unparseable date (sortDate = null) sort to the end.
+    // .lean() returns plain objects for a faster, lighter response.
+    const articles = await Article.find()
+      .sort({ sortDate: -1, createdAt: -1 })
+      .lean();
+
     res.json(articles);
   } catch (error) {
     console.error(error);
@@ -72,7 +29,7 @@ router.get('/', async (req, res) => {
 // @route   GET /api/articles/:id
 // @desc    Get single article
 // @access  Public
-router.get('/:id', async (req, res) => {
+router.get('/:id', publicCache(), async (req, res) => {
   try {
     const article = await Article.findById(req.params.id);
     
