@@ -19,6 +19,7 @@ provider:
     AWS_S3_BUCKET: ${env:AWS_S3_BUCKET}
     AWS_S3_REGION: ${env:AWS_S3_REGION, 'ap-south-2'}
     PUBLIC_FILES_BASE_URL: ${env:PUBLIC_FILES_BASE_URL, 'https://www.isii.global/files'}
+    SITE_BASE_URL: ${env:SITE_BASE_URL, 'https://www.isii.global'}
   iam:
     role:
       statements:
@@ -101,3 +102,12 @@ functions:
       - httpApi:
           path: /api/upload/{proxy+}
           method: ANY
+
+  sitemap:
+    handler: api/sitemap/index.handler
+    memorySize: 512
+    timeout: 15
+    events:
+      - httpApi:
+          path: /sitemap.xml
+          method: GET
